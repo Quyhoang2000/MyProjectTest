@@ -1,395 +1,377 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 
-@interface QuyHoangWindow : UIWindow
-@property (nonatomic, strong) WKWebView *webView;
-@property (nonatomic, strong) UIButton *btnMenu;
-- (void)toggleMenu;
+// --- PHẦN 1: DÁN TOÀN BỘ HTML CỦA BẠN VÀO ĐÂY ---
+static NSString *htmlContent = @R"html(
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QUYHOANG FXY - ELITE LUXURY v4.8</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* CSS COMBINED - ELITE SYSTEM */
+        :root { 
+            --bg-deep: #06080c; 
+            --accent-soft: #f8fafc;
+            --text-dim: #94a3b8;
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --input-bg: rgba(255, 255, 255, 0.03);
+            --primary: #00f2ff; 
+            --shadow: #7000ff; 
+            --success: #4cd964; 
+            --bg: #000; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+        body { background: var(--bg-deep); height: 100vh; color: white; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative; }
+
+        /* Background Effects */
+        canvas { position: fixed; top: 0; left: 0; z-index: 1; opacity: 0.6; }
+        .overlay { position: fixed; inset: 0; background: radial-gradient(circle, transparent 20%, #000 100%); z-index: 2; }
+
+        /* --- UI AUTH STYLE --- */
+        .auth-container { 
+            position: relative; z-index: 10;
+            background: rgba(15, 23, 42, 0.6); 
+            backdrop-filter: blur(25px); 
+            -webkit-backdrop-filter: blur(25px); 
+            padding: 55px 35px; border-radius: 40px; 
+            width: 90%; max-width: 350px; text-align: center; 
+            border: 1px solid var(--glass-border); 
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+            transition: all 0.5s ease;
+        }
+
+        .logo-box i { font-size: 3.2rem; color: var(--accent-soft); animation: breathe 4s ease-in-out infinite; }
+        @keyframes breathe { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.96); opacity: 0.7; } }
+
+        .auth-h2 { font-size: 1.1rem; letter-spacing: 4px; margin: 15px 0 8px; text-transform: uppercase; color: #ffffff; }
+        .desc { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 40px; line-height: 1.7; }
+
+        .input-group input { 
+            width: 100%; padding: 18px; border-radius: 18px; border: 1px solid var(--glass-border); 
+            background: var(--input-bg); color: white; text-align: center; outline: none; margin-bottom: 20px;
+        }
+
+        .btn-auth { 
+            width: 100%; padding: 17px; border-radius: 18px; border: none; 
+            background: var(--accent-soft); color: #000; font-weight: 600; cursor: pointer; 
+        }
+
+        /* --- UI MAIN MENU STYLE --- */
+        #ui-main-menu { 
+            display: none; width: 100%; height: 100vh; flex-direction: column; 
+            position: relative; z-index: 10; background: var(--bg); 
+        }
+
+        .header { padding: 25px 20px 10px; text-align: center; }
+        .logo-luxury { font-size: 3.5rem; color: #fff; filter: drop-shadow(0 0 15px var(--primary)); animation: glow 2.5s infinite; }
+        @keyframes glow { 0%, 100% { opacity: 0.5; transform: scale(0.98); } 50% { opacity: 1; transform: scale(1.05); filter: drop-shadow(0 0 25px var(--shadow)); } }
+
+        .stats-bar { display: flex; justify-content: space-around; padding: 12px; background: rgba(0,0,0,0.85); backdrop-filter: blur(20px); border-bottom: 2px solid var(--primary); }
+        .st-v { font-weight: 900; color: var(--primary); font-size: 0.85rem; }
+        .st-l { font-size: 0.5rem; color: #aaa; text-transform: uppercase; letter-spacing: 2px; }
+
+        .import-box { margin: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 20px; border: 1px dashed var(--primary); text-align: center; }
+        .file-label { display: block; padding: 10px; background: rgba(0, 242, 255, 0.1); border-radius: 12px; border: 1px solid var(--primary); color: var(--primary); font-size: 0.7rem; font-weight: bold; cursor: pointer; }
+
+        .scroll { flex-grow: 1; overflow-y: auto; padding: 0 15px 40px 15px; }
+        .card { background: rgba(255,255,255,0.03); border-radius: 20px; padding: 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .card.active { border-color: var(--success); background: rgba(76, 217, 100, 0.12); }
+
+        .icon-box { width: 42px; height: 42px; background: #000; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 12px; color: var(--primary); border: 1px solid var(--primary); }
+        .switch { width: 50px; height: 26px; -webkit-appearance: none; background: #333; border-radius: 20px; position: relative; cursor: pointer; transition: 0.4s; }
+        .switch:checked { background: var(--success); }
+        .switch::before { content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%; top: 3px; left: 3px; background: #fff; transition: 0.4s; }
+        .switch:checked::before { left: 27px; }
+
+        .console { height: 110px; background: #000; border-top: 2px solid var(--primary); padding: 15px; font-family: monospace; font-size: 0.65rem; color: var(--success); overflow-y: auto; text-align: left; }
+        b { font-size: 0.85rem; color: #fff; display: block; }
+        small { color: var(--primary); font-size: 0.6rem; font-weight: bold; }
+
+        /* Common Classes */
+        .hidden { display: none; opacity: 0; }
+        .spinner { width: 35px; height: 35px; border: 2px solid rgba(255,255,255,0.05); border-top: 2px solid var(--accent-soft); border-radius: 50%; animation: spin 1s infinite; margin: 0 auto 15px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.8s forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <canvas id="neuralCanvas"></canvas>
+    <div class="overlay"></div>
+
+    <div id="ui-auth" class="auth-container">
+        <div class="logo-box"><i class="fa-brands fa-apple"></i></div>
+        <h2 class="auth-h2">Elite System</h2>
+        <p class="desc">Vui lòng hoàn tất xác minh danh tính<br>để truy cập vào hệ thống mã hóa.</p>
+        
+        <div id="auth-form">
+            <div class="input-group">
+                <input type="text" id="userInput" placeholder="Nhập tên của bạn..." autocomplete="off">
+            </div>
+            <button class="btn-auth" onclick="handleActivation()">GỬI PHÊ DUYỆT</button>
+        </div>
+
+        <div id="ui-wait" class="hidden">
+            <div class="spinner"></div>
+            <p id="stt-text" style="font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; font-weight:600; color:var(--text-dim)">Đang chờ Admin duyệt...</p>
+        </div>
+    </div>
+
+    <div id="ui-main-menu">
+        <div class="header">
+            <i class="fab fa-apple logo-luxury"></i>
+            <div style="font-size: 0.9rem; font-weight: 900; color: var(--primary); letter-spacing: 5px; margin-top: 10px;">ELITE LUXURY v4.8</div>
+        </div>
+
+        <div class="stats-bar">
+            <div class="it"><div class="st-v" id="fps">120</div><div class="st-l">FPS</div></div>
+            <div class="it"><div class="st-v" id="core-stt" style="color:orange">SYNCING...</div><div class="st-l">STATUS</div></div>
+            <div class="it"><div class="st-v" id="ping">1ms</div><div class="st-l">LATENCY</div></div>
+        </div>
+
+        <div class="import-box">
+            <input type="file" id="fileInput" style="display:none" accept=".js,.txt" onchange="importFile(this)">
+            <label for="fileInput" class="file-label">
+                <i class="fas fa-file-import"></i> NHẬP FILE SCRIPT (.JS)
+            </label>
+        </div>
+
+        <div class="scroll">
+            <div class="card">
+                <div style="display:flex; align-items:center;">
+                    <div class="icon-box" style="color: #ff5e00;"><i class="fas fa-feather"></i></div>
+                    <div><b>NHẸ TÂM 100%</b><br><small>Memory Mod</small></div>
+                </div>
+                <input type="checkbox" class="switch" onchange="if(this.checked) run('nhetam'); toggle(this)">
+            </div>
+            <div class="card">
+                <div style="display:flex; align-items:center;">
+                    <div class="icon-box" style="color: var(--success);"><i class="fas fa-anchor"></i></div>
+                    <div><b>ĐẦM TÂM VIP</b><br><small>Anti-Shake Core</small></div>
+                </div>
+                <input type="checkbox" class="switch" onchange="if(this.checked) run('damtam'); toggle(this)">
+            </div>
+            <div class="card">
+                <div style="display:flex; align-items:center;">
+                    <div class="icon-box" style="color: #ffcc00;"><i class="fas fa-expand"></i></div>
+                    <div><b>BUFF MÀN</b><br><small>Wide View</small></div>
+                </div>
+                <input type="checkbox" class="switch" onchange="if(this.checked) run('buffman'); toggle(this)">
+            </div>
+            <div class="card">
+                <div style="display:flex; align-items:center;">
+                    <div class="icon-box" style="color: #fff;"><i class="fas fa-crosshairs"></i></div>
+                    <div><b>BÁM ĐẦU 80%</b><br><small>Auto Headshot</small></div>
+                </div>
+                <input type="checkbox" class="switch" onchange="if(this.checked) run('aimbot'); toggle(this)">
+            </div>
+        </div>
+        <div class="console" id="log">> Sẵn sàng nhập file...</div>
+    </div>
+
+    <script>
+        // --- CONFIG LOGIC AUTH ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwulmuyIzBWWsrNvhpCAhM6ctVJcJDzVmH8EbAHRcXkCl7sdYYsIa6BYiBwXCNiz_NTwA/exec"; 
+        const TELE_TOKEN = "8615717943:AAFHHOX3Nn2JJTZO8JtJMKUxjwck9T-LSsk";
+        const ADMIN_ID = "7075498286";
+        const GROUP_ID = "-1003974066486";
+        const deviceId = "ELITE-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        // --- CONFIG LOGIC MAIN ---
+        const CLOUD_LINK = "https://script.google.com/macros/s/AKfycbzCLeaIiI4cf5jgV44mLIKYU-ZLeJOFGhIH8QzWQm_oYQne8dZOtpumFymIEyQc-TeI/exec";
+
+        async function handleActivation() {
+            const user = document.getElementById('userInput').value.trim();
+            if (!user) return;
+
+            document.getElementById('auth-form').classList.add('hidden');
+            setTimeout(() => {
+                document.getElementById('auth-form').style.display = 'none';
+                document.getElementById('ui-wait').style.display = 'block';
+                document.getElementById('ui-wait').classList.remove('hidden');
+                document.getElementById('ui-wait').classList.add('fade-in');
+            }, 300);
+
+            const approveUrl = `${SCRIPT_URL}?id=${deviceId}&access=true`;
+            const msgContent = `🛡️ *YÊU CẦU TRUY CẬP*\n━━━━━━━━━━━━━━\n👤 User: *${user.toUpperCase()}*\n🆔 ID: \`${deviceId}\`\n━━━━━━━━━━━━━━`;
+            const keyboard = { inline_keyboard: [[{ text: `✅ DUYỆT CHO ${user.toUpperCase()}`, url: approveUrl }]] };
+
+            const sendTele = (chatId) => {
+                const params = new URLSearchParams({
+                    chat_id: chatId, text: msgContent, parse_mode: "Markdown", reply_markup: JSON.stringify(keyboard)
+                });
+                fetch(`https://api.telegram.org/bot${TELE_TOKEN}/sendMessage?${params}`);
+            };
+
+            sendTele(ADMIN_ID);
+            sendTele(GROUP_ID);
+
+            window.handleResponse = function(status) {
+                if (status === "TRUE") {
+                    const stt = document.getElementById('stt-text');
+                    stt.innerText = "Xác minh thành công";
+                    stt.style.color = "#ffffff";
+                    setTimeout(() => {
+                        // CHUYỂN SANG MENU CHÍNH
+                        document.getElementById('ui-auth').style.display = 'none';
+                        document.getElementById('ui-main-menu').style.display = 'flex';
+                        document.getElementById('ui-main-menu').classList.add('fade-in');
+                        fetchCloud(); // Bắt đầu kết nối Cloud Menu
+                    }, 800);
+                }
+            };
+
+            setInterval(() => {
+                const old = document.getElementById('jsonp');
+                if (old) old.remove();
+                const s = document.createElement('script');
+                s.id = 'jsonp';
+                s.src = `${SCRIPT_URL}?id=${deviceId}&callback=handleResponse&t=${Date.now()}`;
+                document.body.appendChild(s);
+            }, 2000);
+        }
+
+        // --- HÀM CỦA MAIN MENU ---
+        function importFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const code = e.target.result;
+                try {
+                    eval(code);
+                    msg("✅ Đã nạp và chạy: " + file.name);
+                } catch (err) {
+                    msg("❌ Lỗi Script: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        window.onCloudResponse = function(data) {
+            if (data) {
+                msg("☁️ Cloud: " + (data.notify || "Online"));
+                if (data.version) {
+                    document.getElementById('core-stt').innerText = "V" + data.version;
+                    document.getElementById('core-stt').style.color = "#4cd964";
+                }
+            }
+        };
+
+        function fetchCloud() {
+            const script = document.createElement('script');
+            script.src = CLOUD_LINK + "?callback=onCloudResponse&v=" + Date.now();
+            document.body.appendChild(script);
+        }
+
+        function getH5() { return window.h5gg || (parent && parent.h5gg) || (top && top.h5gg) || null; }
+
+        function run(mode) {
+            const h = getH5();
+            if(!h) { msg("❌ Shadow Engine Offline."); return; }
+            const r = ['0x100000000', '0x200000000'];
+            switch(mode) {
+                case 'nhetam': h.searchNumber('1.0', 'F32', r[0], r[1]); h.editAll('1.95', 'F32'); msg("✓ Nhẹ tâm: OK."); break;
+                case 'damtam': h.searchNumber('0.01', 'F32', r[0], r[1]); h.editAll('0', 'F32'); msg("✓ Đầm tâm: OK."); break;
+                case 'buffman': 
+                    h.searchNumber('4417130516484980736', 'I64', '0x100000000', '0x160000000');
+                    let rs = h.getResults(h.getResultsCount());
+                    for(let i=0; i<rs.length; i++) {
+                        h.setValue(Number(rs[i].address)-4, 2000, "F32");
+                        h.setValue(Number(rs[i].address), 2000, "F32");
+                    }
+                    msg("✓ Buff màn: OK."); break;
+                case 'aimbot': h.searchNumber('1065353216', 'I32', r[0], r[1]); h.editAll('1092616192', 'I32'); msg("✓ Aimbot: OK."); break;
+            }
+        }
+
+        function msg(t) {
+            const l = document.getElementById('log');
+            if(l) {
+                l.innerHTML += `<div>> [${new Date().toLocaleTimeString()}] ${t}</div>`;
+                l.scrollTop = l.scrollHeight;
+            }
+        }
+        function toggle(el) { el.parentElement.classList.toggle('active', el.checked); }
+
+        // Hiệu ứng nền Neural
+        const canvas = document.getElementById('neuralCanvas');
+        const ctx = canvas.getContext('2d');
+        let pts = [];
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.onresize = resize; resize();
+        for(let i=0; i<30; i++) pts.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, vx: Math.random()-0.5, vy: Math.random()-0.5});
+        function draw() {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.strokeStyle = "rgba(0, 242, 255, 0.1)";
+            pts.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                if(p.x<0 || p.x>canvas.width) p.vx*=-1; if(p.y<0 || p.y>canvas.height) p.vy*=-1;
+                pts.forEach(p2 => { if(Math.hypot(p.x-p2.x, p.y-p2.y)<100) { ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); } });
+            });
+            requestAnimationFrame(draw);
+        }
+        draw();
+    </script>
+</body>
+</html>
+)html";
+
+// --- PHẦN 2: MÃ HOOK ĐỂ HIỂN THỊ MENU ---
+@interface EliteMenuManager : NSObject <WKNavigationDelegate>
+@property (nonatomic, strong) WKWebView *menuWebView;
+@property (nonatomic, strong) UIButton *toggleButton;
++ (instancetype)sharedInstance;
 @end
 
-%subclass QuyHoangWindow : UIWindow
-%property (nonatomic, strong) WKWebView *webView;
-%property (nonatomic, strong) UIButton *btnMenu;
+@implementation EliteMenuManager
 
-- (instancetype)initWithFrame:(CGRect)frame {
-    self = %orig([UIScreen mainScreen].bounds);
-    if (self) {
-        self.windowLevel = UIWindowLevelStatusBar + 100.0;
-        self.backgroundColor = [UIColor clearColor];
-        [self setHidden:NO];
-
-        self.btnMenu = [UIButton buttonWithType:UIButtonTypeCustom];
-        self.btnMenu.frame = CGRectMake(30, 150, 55, 55);
-        [self.btnMenu setTitle:@"FXY" forState:UIControlStateNormal];
-        self.btnMenu.backgroundColor = [UIColor blackColor];
-        self.btnMenu.layer.cornerRadius = 27.5;
-        [self.btnMenu addTarget:self action:@selector(toggleMenu) forControlEvents:UIControlEventTouchUpInside];
-        
-        self.webView = [[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 310, 460)];
-        self.webView.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
-        self.webView.hidden = YES;
-        self.webView.layer.cornerRadius = 15;
-        self.webView.backgroundColor = [UIColor clearColor];
-        self.webView.opaque = NO;
-
-        // =========================================================
-        // ĐÂY LÀ BẢN FIX TẬN GỐC (DÙNG RAW STRING LTRERAL)
-        // Cú pháp: R"( ... )"
-        // Ông dán chuỗi Base64 dài bao nhiêu, xuống dòng cỡ nào cũng ĐƯỢC HẾT!
-        // =========================================================
-        const char *rawBase64 = R"(
-PCFET0NUWVBFIGh0bWw+
-PGh0bWwgbGFuZz0idmkiPg==
-PGhlYWQ+
-ICAgIDxtZXRhIGNoYXJzZXQ9IlVURi04Ij4=
-ICAgIDxtZXRhIG5hbWU9InZpZXdwb3J0IiBjb250ZW50PSJ3aWR0aD1kZXZpY2Utd2lkdGgsIGluaXRpYWwtc2NhbGU9MS4wLCBtYXhpbXVtLXNjYWxlPTEuMCwgdXNlci1zY2FsYWJsZT1ubyI+
-ICAgIDx0aXRsZT5RVVlIT0FORyBGWFkgLSBFTElURSBMVVhVUlkgdjQuODwvdGl0bGU+
-ICAgIDxsaW5rIHJlbD0ic3R5bGVzaGVldCIgaHJlZj0iaHR0cHM6Ly9jZG5qcy5jbG91ZGZsYXJlLmNvbS9hamF4L2xpYnMvZm9udC1hd2Vzb21lLzYuNC4wL2Nzcy9hbGwubWluLmNzcyI+
-ICAgIDxzdHlsZT4=
-ICAgICAgICAvKiBDU1MgQ09NQklORUQgLSBFTElURSBTWVNURU0gKi8=
-ICAgICAgICA6cm9vdCB7IA==
-ICAgICAgICAgICAgLS1iZy1kZWVwOiAjMDYwODBjOyA=
-ICAgICAgICAgICAgLS1hY2NlbnQtc29mdDogI2Y4ZmFmYzs=
-ICAgICAgICAgICAgLS10ZXh0LWRpbTogIzk0YTNiODs=
-ICAgICAgICAgICAgLS1nbGFzcy1ib3JkZXI6IHJnYmEoMjU1LCAyNTUsIDI1NSwgMC4wOCk7
-ICAgICAgICAgICAgLS1pbnB1dC1iZzogcmdiYSgyNTUsIDI1NSwgMjU1LCAwLjAzKTs=
-ICAgICAgICAgICAgLS1wcmltYXJ5OiAjMDBmMmZmOyA=
-ICAgICAgICAgICAgLS1zaGFkb3c6ICM3MDAwZmY7IA==
-ICAgICAgICAgICAgLS1zdWNjZXNzOiAjNGNkOTY0OyA=
-ICAgICAgICAgICAgLS1iZzogIzAwMDsg
-ICAgICAgICB9
-
-ICAgICAgICAqIHsgbWFyZ2luOiAwOyBwYWRkaW5nOiAwOyBib3gtc2l6aW5nOiBib3JkZXItYm94OyBmb250LWZhbWlseTogLWFwcGxlLXN5c3RlbSwgQmxpbmtNYWNTeXN0ZW1Gb250LCAiU2Vnb2UgVUkiLCBSb2JvdG8sIHNhbnMtc2VyaWY7IC13ZWJraXQtdGFwLWhpZ2hsaWdodC1jb2xvcjogdHJhbnNwYXJlbnQ7IH0=
-
-ICAgICAgICBib2R5IHsgYmFja2dyb3VuZDogdmFyKC0tYmctZGVlcCk7IGhlaWdodDogMTAwdmg7IGNvbG9yOiB3aGl0ZTsgb3ZlcmZsb3c6IGhpZGRlbjsgZGlzcGxheTogZmxleDsgYWxpZ24taXRlbXM6IGNlbnRlcjsganVzdGlmeS1jb250ZW50OiBjZW50ZXI7IHBvc2l0aW9uOiByZWxhdGl2ZTsgfQ==
-
-ICAgICAgICAvKiBCYWNrZ3JvdW5kIEVmZmVjdHMgKi8=
-ICAgICAgICBjYW52YXMgeyBwb3NpdGlvbjogZml4ZWQ7IHRvcDogMDsgbGVmdDogMDsgei1pbmRleDogMTsgb3BhY2l0eTogMC42OyB9
-ICAgICAgICAub3ZlcmxheSB7IHBvc2l0aW9uOiBmaXhlZDsgaW5zZXQ6IDA7IGJhY2tncm91bmQ6IHJhZGlhbC1ncmFkaWVudChjaXJjbGUsIHRyYW5zcGFyZW50IDIwJSwgIzAwMCAxMDAlKTsgei1pbmRleDogMjsgfQ==
-
-ICAgICAgICAvKiAtLS0gVUkgQVVUSCBTVFlMRSAtLS0gKi8=
-ICAgICAgICAuYXV0aC1jb250YWluZXIgeyA=
-ICAgICAgICAgICAgcG9zaXRpb246IHJlbGF0aXZlOyB6LWluZGV4OiAxMDs=
-ICAgICAgICAgICAgYmFja2dyb3VuZDogcmdiYSgxNSwgMjMsIDQyLCAwLjYpOyA=
-ICAgICAgICAgICAgYmFja2Ryb3AtZmlsdGVyOiBibHVyKDI1cHgpOyA=
-ICAgICAgICAgICAgLXdlYmtpdC1iYWNrZHJvcC1maWx0ZXI6IGJsdXIoMjVweCk7IA==
-ICAgICAgICAgICAgcGFkZGluZzogNTVweCAzNXB4OyBib3JkZXItcmFkaXVzOiA0MHB4OyA=
-ICAgICAgICAgICAgd2lkdGg6IDkwJTsgbWF4LXdpZHRoOiAzNTBweDsgdGV4dC1hbGlnbjogY2VudGVyOyA=
-ICAgICAgICAgICAgYm9yZGVyOiAxcHggc29saWQgdmFyKC0tZ2xhc3MtYm9yZGVyKTsg
-ICAgICAgICAgICAgYm94LXNoYWRvdzogMCA0MHB4IDEwMHB4IHJnYmEoMCwgMCwgMCwgMC42KTs=
-ICAgICAgICAgICAgdHJhbnNpdGlvbjogYWxsIDAuNXMgZWFzZTs=
-ICAgICAgICB9
-
-ICAgICAgICAubG9nby1ib3ggaSB7IGZvbnQtc2l6ZTogMy4ycmVtOyBjb2xvcjogdmFyKC0tYWNjZW50LXNvZnQpOyBhbmltYXRpb246IGJyZWF0aGUgNHMgZWFzZS1pbi1vdXQgaW5maW5pdGU7IH0=
-ICAgICAgICBAa2V5ZnJhbWVzIGJyZWF0aGUgeyAwJSwgMTAwJSB7IHRyYW5zZm9ybTogc2NhbGUoMSk7IG9wYWNpdHk6IDE7IH0gNTAlIHsgdHJhbnNmb3JtOiBzY2FsZSgwLjk2KTsgb3BhY2l0eTogMC43OyB9IH0=
-
-ICAgICAgICAuYXV0aC1oMiB7IGZvbnQtc2l6ZTogMS4xcmVtOyBsZXR0ZXItc3BhY2luZzogNHB4OyBtYXJnaW46IDE1cHggMCA4cHg7IHRleHQtdHJhbnNmb3JtOiB1cHBlcmNhc2U7IGNvbG9yOiAjZmZmZmZmOyB9
-ICAgICAgICAuZGVzYyB7IGZvbnQtc2l6ZTogMC43NXJlbTsgY29sb3I6IHZhcigtLXRleHQtZGltKTsgbWFyZ2luLWJvdHRvbTogNDBweDsgbGluZS1oZWlnaHQ6IDEuNzsgfQ==
-
-ICAgICAgICAuaW5wdXQtZ3JvdXAgaW5wdXQgeyA=
-ICAgICAgICAgICAgd2lkdGg6IDEwMCU7IHBhZGRpbmc6IDE4cHg7IGJvcmRlci1yYWRpdXM6IDE4cHg7IGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLWdsYXNzLWJvcmRlcik7IA==
-ICAgICAgICAgICAgYmFja2dyb3VuZDogdmFyKC0taW5wdXQtYmcpOyBjb2xvcjogd2hpdGU7IHRleHQtYWxpZ246IGNlbnRlcjsgb3V0bGluZTogbm9uZTsgbWFyZ2luLWJvdHRvbTogMjBweDs=
-ICAgICAgICB9
-
-ICAgICAgICAuYnRuLWF1dGggeyA=
-ICAgICAgICAgICAgd2lkdGg6IDEwMCU7IHBhZGRpbmc6IDE3cHg7IGJvcmRlci1yYWRpdXM6IDE4cHg7IGJvcmRlcjogbm9uZTsg
-ICAgICAgICAgICAgYmFja2dyb3VuZDogdmFyKC0tYWNjZW50LXNvZnQpOyBjb2xvcjogIzAwMDsgZm9udC13ZWlnaHQ6IDYwMDsgY3Vyc29yOiBwb2ludGVyOyA=
-ICAgICAgICB9
-
-ICAgICAgICAvKiAtLS0gVUkgTUFJTiBNRU5VIFNUWUxFIC0tLSAqLw==
-ICAgICAgICAjdWktbWFpbi1tZW51IHsg
-ICAgICAgICAgICAgZGlzcGxheTogbm9uZTsgd2lkdGg6IDEwMCU7IGhlaWdodDogMTAwdmg7IGZsZXgtZGlyZWN0aW9uOiBjb2x1bW47IA==
-ICAgICAgICAgICAgcG9zaXRpb246IHJlbGF0aXZlOyB6LWluZGV4OiAxMDsgYmFja2dyb3VuZDogdmFyKC0tYmcpOyA=
-ICAgICAgICB9
-
-ICAgICAgICAuaGVhZGVyIHsgcGFkZGluZzogMjVweCAyMHB4IDEwcHg7IHRleHQtYWxpZ246IGNlbnRlcjsgfQ==
-ICAgICAgICAubG9nby1sdXh1cnkgeyBmb250LXNpemU6IDMuNXJlbTsgY29sb3I6ICNmZmY7IGZpbHRlcjogZHJvcC1zaGFkb3coMCAwIDE1cHggdmFyKC0tcHJpbWFyeSkpOyBhbmltYXRpb246IGdsb3cgMi41cyBpbmZpbml0ZTsgfQ==
-ICAgICAgICBAa2V5ZnJhbWVzIGdsb3cgeyAwJSwgMTAwJSB7IG9wYWNpdHk6IDAuNTsgdHJhbnNmb3JtOiBzY2FsZSgwLjk4KTsgfSA1MCUgeyBvcGFjaXR5OiAxOyB0cmFuc2Zvcm06IHNjYWxlKDEuMDUpOyBmaWx0ZXI6IGRyb3Atc2hhZG93KDAgMCAyNXB4IHZhcigtLXNoYWRvdykpOyB9IH0=
-
-ICAgICAgICAuc3RhdHMtYmFyIHsgZGlzcGxheTogZmxleDsganVzdGlmeS1jb250ZW50OiBzcGFjZS1hcm91bmQ7IHBhZGRpbmc6IDEycHg7IGJhY2tncm91bmQ6IHJnYmEoMCwwLDAsMC44NSk7IGJhY2tkcm9wLWZpbHRlcjogYmx1cigyMHB4KTsgYm9yZGVyLWJvdHRvbTogMnB4IHNvbGlkIHZhcigtLXByaW1hcnkpOyB9
-ICAgICAgICAuc3QtdiB7IGZvbnQtd2VpZ2h0OiA5MDA7IGNvbG9yOiB2YXIoLS1wcmltYXJ5KTsgZm9udC1zaXplOiAwLjg1cmVtOyB9
-ICAgICAgICAuc3QtbCB7IGZvbnQtc2l6ZTogMC41cmVtOyBjb2xvcjogI2FhYTsgdGV4dC10cmFuc2Zvcm06IHVwcGVyY2FzZTsgbGV0dGVyLXNwYWNpbmc6IDJweDsgfQ==
-
-ICAgICAgICAuaW1wb3J0LWJveCB7IG1hcmdpbjogMTVweDsgcGFkZGluZzogMTVweDsgYmFja2dyb3VuZDogcmdiYSgyNTUsMjU1LDI1NSwwLjA1KTsgYm9yZGVyLXJhZGl1czogMjBweDsgYm9yZGVyOiAxcHggZGFzaGVkIHZhcigtLXByaW1hcnkpOyB0ZXh0LWFsaWduOiBjZW50ZXI7IH0=
-ICAgICAgICAuZmlsZS1sYWJlbCB7IGRpc3BsYXk6IGJsb2NrOyBwYWRkaW5nOiAxMHB4OyBiYWNrZ3JvdW5kOiByZ2JhKDAsIDI0MiwgMjU1LCAwLjEpOyBib3JkZXItcmFkaXVzOiAxMnB4OyBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1wcmltYXJ5KTsgY29sb3I6IHZhcigtLXByaW1hcnkpOyBmb250LXNpemU6IDAuN3JlbTsgZm9udC13ZWlnaHQ6IGJvbGQ7IGN1cnNvcjogcG9pbnRlcjsgfQ==
-
-ICAgICAgICAuc2Nyb2xsIHsgZmxleC1ncm93OiAxOyBvdmVyZmxvdy15OiBhdXRvOyBwYWRkaW5nOiAwIDE1cHggNDBweCAxNXB4OyB9
-ICAgICAgICAuY2FyZCB7IGJhY2tncm91bmQ6IHJnYmEoMjU1LDI1NSwyNTUsMC4wMyk7IGJvcmRlci1yYWRpdXM6IDIwcHg7IHBhZGRpbmc6IDE2cHg7IGRpc3BsYXk6IGZsZXg7IGFsaWduLWl0ZW1zOiBjZW50ZXI7IGp1c3RpZnktY29udGVudDogc3BhY2UtYmV0d2VlbjsgbWFyZ2luLWJvdHRvbTogMTJweDsgYm9yZGVyOiAxcHggc29saWQgcmdiYSgyNTUsMjU1LDI1NSwwLjEpOyB9
-ICAgICAgICAuY2FyZC5hY3RpdmUgeyBib3JkZXItY29sb3I6IHZhcigtLXN1Y2Nlc3MpOyBiYWNrZ3JvdW5kOiByZ2JhKDc2LCAyMTcsIDEwMCwgMC4xMik7IH0=
-
-ICAgICAgICAuaWNvbi1ib3ggeyB3aWR0aDogNDJweDsgaGVpZ2h0OiA0MnB4OyBiYWNrZ3JvdW5kOiAjMDAwOyBib3JkZXItcmFkaXVzOiAxMnB4OyBkaXNwbGF5OiBmbGV4OyBhbGlnbi1pdGVtczogY2VudGVyOyBqdXN0aWZ5LWNvbnRlbnQ6IGNlbnRlcjsgbWFyZ2luLXJpZ2h0OiAxMnB4OyBjb2xvcjogdmFyKC0tcHJpbWFyeSk7IGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLXByaW1hcnkpOyB9
-ICAgICAgICAuc3dpdGNoIHsgd2lkdGg6IDUwcHg7IGhlaWdodDogMjZweDsgLXdlYmtpdC1hcHBlYXJhbmNlOiBub25lOyBiYWNrZ3JvdW5kOiAjMzMzOyBib3JkZXItcmFkaXVzOiAyMHB4OyBwb3NpdGlvbjogcmVsYXRpdmU7IGN1cnNvcjogcG9pbnRlcjsgdHJhbnNpdGlvbjogMC40czsgfQ==
-ICAgICAgICAuc3dpdGNoOmNoZWNrZWQgeyBiYWNrZ3JvdW5kOiB2YXIoLS1zdWNjZXNzKTsgfQ==
-ICAgICAgICAuc3dpdGNoOjpiZWZvcmUgeyBjb250ZW50OiAiIjsgcG9zaXRpb246IGFic29sdXRlOyB3aWR0aDogMjBweDsgaGVpZ2h0OiAyMHB4OyBib3JkZXItcmFkaXVzOiA1MCU7IHRvcDogM3B4OyBsZWZ0OiAzcHg7IGJhY2tncm91bmQ6ICNmZmY7IHRyYW5zaXRpb246IDAuNHM7IH0=
-ICAgICAgICAuc3dpdGNoOmNoZWNrZWQ6OmJlZm9yZSB7IGxlZnQ6IDI3cHg7IH0=
-
-ICAgICAgICAuY29uc29sZSB7IGhlaWdodDogMTEwcHg7IGJhY2tncm91bmQ6ICMwMDA7IGJvcmRlci10b3A6IDJweCBzb2xpZCB2YXIoLS1wcmltYXJ5KTsgcGFkZGluZzogMTVweDsgZm9udC1mYW1pbHk6IG1vbm9zcGFjZTsgZm9udC1zaXplOiAwLjY1cmVtOyBjb2xvcjogdmFyKC0tc3VjY2Vzcyk7IG92ZXJmbG93LXk6IGF1dG87IHRleHQtYWxpZ246IGxlZnQ7IH0=
-ICAgICAgICBiIHsgZm9udC1zaXplOiAwLjg1cmVtOyBjb2xvcjogI2ZmZjsgZGlzcGxheTogYmxvY2s7IH0=
-ICAgICAgICBzbWFsbCB7IGNvbG9yOiB2YXIoLS1wcmltYXJ5KTsgZm9udC1zaXplOiAwLjZyZW07IGZvbnQtd2VpZ2h0OiBib2xkOyB9
-
-ICAgICAgICAvKiBDb21tb24gQ2xhc3NlcyAqLw==
-ICAgICAgICAuaGlkZGVuIHsgZGlzcGxheTogbm9uZTsgb3BhY2l0eTogMDsgfQ==
-ICAgICAgICAuc3Bpbm5lciB7IHdpZHRoOiAzNXB4OyBoZWlnaHQ6IDM1cHg7IGJvcmRlcjogMnB4IHNvbGlkIHJnYmEoMjU1LDI1NSwyNTUsMC4wNSk7IGJvcmRlci10b3A6IDJweCBzb2xpZCB2YXIoLS1hY2NlbnQtc29mdCk7IGJvcmRlci1yYWRpdXM6IDUwJTsgYW5pbWF0aW9uOiBzcGluIDFzIGluZmluaXRlOyBtYXJnaW46IDAgYXV0byAxNXB4OyB9
-ICAgICAgICBAa2V5ZnJhbWVzIHNwaW4geyAxMDAlIHsgdHJhbnNmb3JtOiByb3RhdGUoMzYwZGVnKTsgfSB9
-ICAgICAgICAuZmFkZS1pbiB7IGFuaW1hdGlvbjogZmFkZUluIDAuOHMgZm9yd2FyZHM7IH0=
-ICAgICAgICBAa2V5ZnJhbWVzIGZhZGVJbiB7IGZyb20geyBvcGFjaXR5OiAwOyB9IHRvIHsgb3BhY2l0eTogMTsgfSB9
-ICAgIDwvc3R5bGU+
-PC9oZWFkPg==
-PGJvZHk+
-
-ICAgIDxjYW52YXMgaWQ9Im5ldXJhbENhbnZhcyI+PC9jYW52YXM+
-ICAgIDxkaXYgY2xhc3M9Im92ZXJsYXkiPjwvZGl2Pg==
-
-ICAgIDxkaXYgaWQ9InVpLWF1dGgiIGNsYXNzPSJhdXRoLWNvbnRhaW5lciI+
-ICAgICAgICA8ZGl2IGNsYXNzPSJsb2dvLWJveCI+PGkgY2xhc3M9ImZhLWJyYW5kcyBmYS1hcHBsZSI+PC9pPjwvZGl2Pg==
-ICAgICAgICA8aDIgY2xhc3M9ImF1dGgtaDIiPkVsaXRlIFN5c3RlbTwvaDI+
-ICAgICAgICA8cCBjbGFzcz0iZGVzYyI+VnVpIGzDsm5nIGhvw6BuIHThuqV0IHjDoWMgbWluaCBkYW5oIHTDrW5oPGJyPsSR4buDIHRydXkgY+G6rXAgdsOgbyBo4buHIHRo4buRbmcgbcOjIGjDs2EuPC9wPg==
-ICAgICAgICA=
-ICAgICAgICA8ZGl2IGlkPSJhdXRoLWZvcm0iPg==
-ICAgICAgICAgICAgPGRpdiBjbGFzcz0iaW5wdXQtZ3JvdXAiPg==
-ICAgICAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJ0ZXh0IiBpZD0idXNlcklucHV0IiBwbGFjZWhvbGRlcj0iTmjhuq1wIHTDqm4gY+G7p2EgYuG6oW4uLi4iIGF1dG9jb21wbGV0ZT0ib2ZmIj4=
-ICAgICAgICAgICAgPC9kaXY+
-ICAgICAgICAgICAgPGJ1dHRvbiBjbGFzcz0iYnRuLWF1dGgiIG9uY2xpY2s9ImhhbmRsZUFjdGl2YXRpb24oKSI+R+G7rEkgUEjDiiBEVVnhu4ZUPC9idXR0b24+
-ICAgICAgICA8L2Rpdj4=
-
-ICAgICAgICA8ZGl2IGlkPSJ1aS13YWl0IiBjbGFzcz0iaGlkZGVuIj4=
-ICAgICAgICAgICAgPGRpdiBjbGFzcz0ic3Bpbm5lciI+PC9kaXY+
-ICAgICAgICAgICAgPHAgaWQ9InN0dC10ZXh0IiBzdHlsZT0iZm9udC1zaXplOiAwLjdyZW07IGxldHRlci1zcGFjaW5nOiAycHg7IHRleHQtdHJhbnNmb3JtOiB1cHBlcmNhc2U7IGZvbnQtd2VpZ2h0OjYwMDsgY29sb3I6dmFyKC0tdGV4dC1kaW0pIj7EkGFuZyBjaOG7nSBBZG1pbiBkdXnhu4d0Li4uPC9wPg==
-ICAgICAgICA8L2Rpdj4=
-ICAgIDwvZGl2Pg==
-
-ICAgIDxkaXYgaWQ9InVpLW1haW4tbWVudSI+
-ICAgICAgICA8ZGl2IGNsYXNzPSJoZWFkZXIiPg==
-ICAgICAgICAgICAgPGkgY2xhc3M9ImZhYiBmYS1hcHBsZSBsb2dvLWx1eHVyeSI+PC9pPg==
-ICAgICAgICAgICAgPGRpdiBzdHlsZT0iZm9udC1zaXplOiAwLjlyZW07IGZvbnQtd2VpZ2h0OiA5MDA7IGNvbG9yOiB2YXIoLS1wcmltYXJ5KTsgbGV0dGVyLXNwYWNpbmc6IDVweDsgbWFyZ2luLXRvcDogMTBweDsiPkVMSVRFIExVWFVSWSB2NC44PC9kaXY+
-ICAgICAgICA8L2Rpdj4=
-
-ICAgICAgICA8ZGl2IGNsYXNzPSJzdGF0cy1iYXIiPg==
-ICAgICAgICAgICAgPGRpdiBjbGFzcz0iaXQiPjxkaXYgY2xhc3M9InN0LXYiIGlkPSJmcHMiPjEyMDwvZGl2PjxkaXYgY2xhc3M9InN0LWwiPkZQUzwvZGl2PjwvZGl2Pg==
-ICAgICAgICAgICAgPGRpdiBjbGFzcz0iaXQiPjxkaXYgY2xhc3M9InN0LXYiIGlkPSJjb3JlLXN0dCIgc3R5bGU9ImNvbG9yOm9yYW5nZSI+U1lOQ0lORy4uLjwvZGl2PjxkaXYgY2xhc3M9InN0LWwiPlNUQVRVUzwvZGl2PjwvZGl2Pg==
-ICAgICAgICAgICAgPGRpdiBjbGFzcz0iaXQiPjxkaXYgY2xhc3M9InN0LXYiIGlkPSJwaW5nIj4xbXM8L2Rpdj48ZGl2IGNsYXNzPSJzdC1sIj5MQVRFTkNZPC9kaXY+PC9kaXY+
-ICAgICAgICA8L2Rpdj4=
-
-ICAgICAgICA8ZGl2IGNsYXNzPSJpbXBvcnQtYm94Ij4=
-ICAgICAgICAgICAgPGlucHV0IHR5cGU9ImZpbGUiIGlkPSJmaWxlSW5wdXQiIHN0eWxlPSJkaXNwbGF5Om5vbmUiIGFjY2VwdD0iLmpzLC50eHQiIG9uY2hhbmdlPSJpbXBvcnRGaWxlKHRoaXMpIj4=
-ICAgICAgICAgICAgPGxhYmVsIGZvcj0iZmlsZUlucHV0IiBjbGFzcz0iZmlsZS1sYWJlbCI+
-ICAgICAgICAgICAgICAgIDxpIGNsYXNzPSJmYXMgZmEtZmlsZS1pbXBvcnQiPjwvaT4gTkjhuqxQIEZJTEUgU0NSSVBUICguSlMp
-ICAgICAgICAgICAgPC9sYWJlbD4=
-ICAgICAgICA8L2Rpdj4=
-
-ICAgICAgICA8ZGl2IGNsYXNzPSJzY3JvbGwiPg==
-ICAgICAgICAgICAgPGRpdiBjbGFzcz0iY2FyZCI+
-ICAgICAgICAgICAgICAgIDxkaXYgc3R5bGU9ImRpc3BsYXk6ZmxleDsgYWxpZ24taXRlbXM6Y2VudGVyOyI+
-ICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJpY29uLWJveCIgc3R5bGU9ImNvbG9yOiAjZmY1ZTAwOyI+PGkgY2xhc3M9ImZhcyBmYS1mZWF0aGVyIj48L2k+PC9kaXY+
-ICAgICAgICAgICAgICAgICAgICA8ZGl2PjxiPk5I4bq4IFTDgk0gMTAwJTwvYj48YnI+PHNtYWxsPk1lbW9yeSBNb2Q8L3NtYWxsPjwvZGl2Pg==
-ICAgICAgICAgICAgICAgIDwvZGl2Pg==
-ICAgICAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJjaGVja2JveCIgY2xhc3M9InN3aXRjaCIgb25jaGFuZ2U9ImlmKHRoaXMuY2hlY2tlZCkgcnVuKCduaGV0YW0nKTsgdG9nZ2xlKHRoaXMpIj4=
-ICAgICAgICAgICAgPC9kaXY+
-ICAgICAgICAgICAgPGRpdiBjbGFzcz0iY2FyZCI+
-ICAgICAgICAgICAgICAgIDxkaXYgc3R5bGU9ImRpc3BsYXk6ZmxleDsgYWxpZ24taXRlbXM6Y2VudGVyOyI+
-ICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJpY29uLWJveCIgc3R5bGU9ImNvbG9yOiB2YXIoLS1zdWNjZXNzKTsiPjxpIGNsYXNzPSJmYXMgZmEtYW5jaG9yIj48L2k+PC9kaXY+
-ICAgICAgICAgICAgICAgICAgICA8ZGl2PjxiPsSQ4bqmTSBUw4JNIFZJUDwvYj48YnI+PHNtYWxsPkFudGktU2hha2UgQ29yZTwvc21hbGw+PC9kaXY+
-ICAgICAgICAgICAgICAgIDwvZGl2Pg==
-ICAgICAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJjaGVja2JveCIgY2xhc3M9InN3aXRjaCIgb25jaGFuZ2U9ImlmKHRoaXMuY2hlY2tlZCkgcnVuKCdkYW10YW0nKTsgdG9nZ2xlKHRoaXMpIj4=
-ICAgICAgICAgICAgPC9kaXY+
-ICAgICAgICAgICAgPGRpdiBjbGFzcz0iY2FyZCI+
-ICAgICAgICAgICAgICAgIDxkaXYgc3R5bGU9ImRpc3BsYXk6ZmxleDsgYWxpZ24taXRlbXM6Y2VudGVyOyI+
-ICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJpY29uLWJveCIgc3R5bGU9ImNvbG9yOiAjZmZjYzAwOyI+PGkgY2xhc3M9ImZhcyBmYS1leHBhbmQiPjwvaT48L2Rpdj4=
-ICAgICAgICAgICAgICAgICAgICA8ZGl2PjxiPkJVRkYgTcOATjwvYj48YnI+PHNtYWxsPldpZGUgVmlldzwvc21hbGw+PC9kaXY+
-ICAgICAgICAgICAgICAgIDwvZGl2Pg==
-ICAgICAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJjaGVja2JveCIgY2xhc3M9InN3aXRjaCIgb25jaGFuZ2U9ImlmKHRoaXMuY2hlY2tlZCkgcnVuKCdidWZmbWFuJyk7IHRvZ2dsZSh0aGlzKSI+
-ICAgICAgICAgICAgPC9kaXY+
-ICAgICAgICAgICAgPGRpdiBjbGFzcz0iY2FyZCI+
-ICAgICAgICAgICAgICAgIDxkaXYgc3R5bGU9ImRpc3BsYXk6ZmxleDsgYWxpZ24taXRlbXM6Y2VudGVyOyI+
-ICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzPSJpY29uLWJveCIgc3R5bGU9ImNvbG9yOiAjZmZmOyI+PGkgY2xhc3M9ImZhcyBmYS1jcm9zc2hhaXJzIj48L2k+PC9kaXY+
-ICAgICAgICAgICAgICAgICAgICA8ZGl2PjxiPkLDgU0gxJDhuqZVIDgwJTwvYj48YnI+PHNtYWxsPkF1dG8gSGVhZHNob3Q8L3NtYWxsPjwvZGl2Pg==
-ICAgICAgICAgICAgICAgIDwvZGl2Pg==
-ICAgICAgICAgICAgICAgIDxpbnB1dCB0eXBlPSJjaGVja2JveCIgY2xhc3M9InN3aXRjaCIgb25jaGFuZ2U9ImlmKHRoaXMuY2hlY2tlZCkgcnVuKCdhaW1ib3QnKTsgdG9nZ2xlKHRoaXMpIj4=
-ICAgICAgICAgICAgPC9kaXY+
-ICAgICAgICA8L2Rpdj4=
-ICAgICAgICA8ZGl2IGNsYXNzPSJjb25zb2xlIiBpZD0ibG9nIj4+IFPhurVuIHPDoG5nIG5o4bqtcCBmaWxlLi4uPC9kaXY+
-ICAgIDwvZGl2Pg==
-
-ICAgIDxzY3JpcHQ+
-ICAgICAgICAvLyAtLS0gQ09ORklHIExPR0lDIEFVVEggLS0t
-ICAgICAgICBjb25zdCBTQ1JJUFRfVVJMID0gImh0dHBzOi8vc2NyaXB0Lmdvb2dsZS5jb20vbWFjcm9zL3MvQUtmeWNid3VsbXV5SXpCV1dzck52aHBDQWhNNmN0VkpjSkR6Vm1IOEViQUhSY1hrQ2w3c2RZWXNJYTZCWWlCd1hDTml6X05Ud0EvZXhlYyI7IA==
-ICAgICAgICBjb25zdCBURUxFX1RPS0VOID0gIjg2MTU3MTc5NDM6QUFGSEhPWDNObjJKSlRaTzhKdEpNS1V4andjazlULUxTc2siOw==
-ICAgICAgICBjb25zdCBBRE1JTl9JRCA9ICI3MDc1NDk4Mjg2Ijs=
-ICAgICAgICBjb25zdCBHUk9VUF9JRCA9ICItMTAwMzk3NDA2NjQ4NiI7
-ICAgICAgICBjb25zdCBkZXZpY2VJZCA9ICJFTElURS0iICsgTWF0aC5yYW5kb20oKS50b1N0cmluZygzNikuc3Vic3RyaW5nKDIsIDgpLnRvVXBwZXJDYXNlKCk7
-
-ICAgICAgICAvLyAtLS0gQ09ORklHIExPR0lDIE1BSU4gLS0t
-ICAgICAgICBjb25zdCBDTE9VRF9MSU5LID0gImh0dHBzOi8vc2NyaXB0Lmdvb2dsZS5jb20vbWFjcm9zL3MvQUtmeWNiekNMZWFJaUk0Y2Y1amdWNDRtTElLWVUtWkxlSk9GR2hJSDhReldRbV9vWVFuZThkWk90cHVtRnltSUV5UWMtVGVJL2V4ZWMiOw==
-
-ICAgICAgICBhc3luYyBmdW5jdGlvbiBoYW5kbGVBY3RpdmF0aW9uKCkgew==
-ICAgICAgICAgICAgY29uc3QgdXNlciA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd1c2VySW5wdXQnKS52YWx1ZS50cmltKCk7
-ICAgICAgICAgICAgaWYgKCF1c2VyKSByZXR1cm47
-
-ICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ2F1dGgtZm9ybScpLmNsYXNzTGlzdC5hZGQoJ2hpZGRlbicpOw==
-ICAgICAgICAgICAgc2V0VGltZW91dCgoKSA9PiB7
-ICAgICAgICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdhdXRoLWZvcm0nKS5zdHlsZS5kaXNwbGF5ID0gJ25vbmUnOw==
-ICAgICAgICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd1aS13YWl0Jykuc3R5bGUuZGlzcGxheSA9ICdibG9jayc7
-ICAgICAgICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd1aS13YWl0JykuY2xhc3NMaXN0LnJlbW92ZSgnaGlkZGVuJyk7
-ICAgICAgICAgICAgICAgIGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd1aS13YWl0JykuY2xhc3NMaXN0LmFkZCgnZmFkZS1pbicpOw==
-ICAgICAgICAgICAgfSwgMzAwKTs=
-
-ICAgICAgICAgICAgY29uc3QgYXBwcm92ZVVybCA9IGAke1NDUklQVF9VUkx9P2lkPSR7ZGV2aWNlSWR9JmFjY2Vzcz10cnVlYDs=
-ICAgICAgICAgICAgY29uc3QgbXNnQ29udGVudCA9IGDwn5uh77iPICpZw4pVIEPhuqZVIFRSVVkgQ+G6rFAqXG7ilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIFcbvCfkaQgVXNlcjogKiR7dXNlci50b1VwcGVyQ2FzZSgpfSpcbvCfhpQgSUQ6IFxgJHtkZXZpY2VJZH1cYFxu4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSBYDs=
-ICAgICAgICAgICAgY29uc3Qga2V5Ym9hcmQgPSB7IGlubGluZV9rZXlib2FyZDogW1t7IHRleHQ6IGDinIUgRFVZ4buGVCBDSE8gJHt1c2VyLnRvVXBwZXJDYXNlKCl9YCwgdXJsOiBhcHByb3ZlVXJsIH1dXSB9Ow==
-
-ICAgICAgICAgICAgY29uc3Qgc2VuZFRlbGUgPSAoY2hhdElkKSA9PiB7
-ICAgICAgICAgICAgICAgIGNvbnN0IHBhcmFtcyA9IG5ldyBVUkxTZWFyY2hQYXJhbXMoew==
-ICAgICAgICAgICAgICAgICAgICBjaGF0X2lkOiBjaGF0SWQsIHRleHQ6IG1zZ0NvbnRlbnQsIHBhcnNlX21vZGU6ICJNYXJrZG93biIsIHJlcGx5X21hcmt1cDogSlNPTi5zdHJpbmdpZnkoa2V5Ym9hcmQp
-ICAgICAgICAgICAgICAgIH0pOw==
-ICAgICAgICAgICAgICAgIGZldGNoKGBodHRwczovL2FwaS50ZWxlZ3JhbS5vcmcvYm90JHtURUxFX1RPS0VOfS9zZW5kTWVzc2FnZT8ke3BhcmFtc31gKTs=
-ICAgICAgICAgICAgfTs=
-
-ICAgICAgICAgICAgc2VuZFRlbGUoQURNSU5fSUQpOw==
-ICAgICAgICAgICAgc2VuZFRlbGUoR1JPVVBfSUQpOw==
-
-ICAgICAgICAgICAgd2luZG93LmhhbmRsZVJlc3BvbnNlID0gZnVuY3Rpb24oc3RhdHVzKSB7
-ICAgICAgICAgICAgICAgIGlmIChzdGF0dXMgPT09ICJUUlVFIikgew==
-ICAgICAgICAgICAgICAgICAgICBjb25zdCBzdHQgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnc3R0LXRleHQnKTs=
-ICAgICAgICAgICAgICAgICAgICBzdHQuaW5uZXJUZXh0ID0gIljDoWMgbWluaCB0aMOgbmggY8O0bmciOw==
-ICAgICAgICAgICAgICAgICAgICBzdHQuc3R5bGUuY29sb3IgPSAiI2ZmZmZmZiI7
-ICAgICAgICAgICAgICAgICAgICBzZXRUaW1lb3V0KCgpID0+IHs=
-ICAgICAgICAgICAgICAgICAgICAgICAgLy8gQ0hVWeG7gk4gU0FORyBNRU5VIENIw41OSA==
-ICAgICAgICAgICAgICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3VpLWF1dGgnKS5zdHlsZS5kaXNwbGF5ID0gJ25vbmUnOw==
-ICAgICAgICAgICAgICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3VpLW1haW4tbWVudScpLnN0eWxlLmRpc3BsYXkgPSAnZmxleCc7
-ICAgICAgICAgICAgICAgICAgICAgICAgZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ3VpLW1haW4tbWVudScpLmNsYXNzTGlzdC5hZGQoJ2ZhZGUtaW4nKTs=
-ICAgICAgICAgICAgICAgICAgICAgICAgZmV0Y2hDbG91ZCgpOyAvLyBC4bqvdCDEkeG6p3Uga+G6v3QgbuG7kWkgQ2xvdWQgTWVudQ==
-ICAgICAgICAgICAgICAgICAgICB9LCA4MDApOw==
-ICAgICAgICAgICAgICAgIH0=
-ICAgICAgICAgICAgfTs=
-
-ICAgICAgICAgICAgc2V0SW50ZXJ2YWwoKCkgPT4gew==
-ICAgICAgICAgICAgICAgIGNvbnN0IG9sZCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdqc29ucCcpOw==
-ICAgICAgICAgICAgICAgIGlmIChvbGQpIG9sZC5yZW1vdmUoKTs=
-ICAgICAgICAgICAgICAgIGNvbnN0IHMgPSBkb2N1bWVudC5jcmVhdGVFbGVtZW50KCdzY3JpcHQnKTs=
-ICAgICAgICAgICAgICAgIHMuaWQgPSAnanNvbnAnOw==
-ICAgICAgICAgICAgICAgIHMuc3JjID0gYCR7U0NSSVBUX1VSTH0/aWQ9JHtkZXZpY2VJZH0mY2FsbGJhY2s9aGFuZGxlUmVzcG9uc2UmdD0ke0RhdGUubm93KCl9YDs=
-ICAgICAgICAgICAgICAgIGRvY3VtZW50LmJvZHkuYXBwZW5kQ2hpbGQocyk7
-ICAgICAgICAgICAgfSwgMjAwMCk7
-ICAgICAgICB9
-
-ICAgICAgICAvLyAtLS0gSMOATSBD4bumQSBNQUlOIE1FTlUgLS0t
-ICAgICAgICBmdW5jdGlvbiBpbXBvcnRGaWxlKGlucHV0KSB7
-ICAgICAgICAgICAgY29uc3QgZmlsZSA9IGlucHV0LmZpbGVzWzBdOw==
-ICAgICAgICAgICAgaWYgKCFmaWxlKSByZXR1cm47
-ICAgICAgICAgICAgY29uc3QgcmVhZGVyID0gbmV3IEZpbGVSZWFkZXIoKTs=
-ICAgICAgICAgICAgcmVhZGVyLm9ubG9hZCA9IGZ1bmN0aW9uKGUpIHs=
-ICAgICAgICAgICAgICAgIGNvbnN0IGNvZGUgPSBlLnRhcmdldC5yZXN1bHQ7
-ICAgICAgICAgICAgICAgIHRyeSB7
-ICAgICAgICAgICAgICAgICAgICBldmFsKGNvZGUpOw==
-ICAgICAgICAgICAgICAgICAgICBtc2coIuKchSDEkMOjIG7huqFwIHbDoCBjaOG6oXk6ICIgKyBmaWxlLm5hbWUpOw==
-ICAgICAgICAgICAgICAgIH0gY2F0Y2ggKGVycikgew==
-ICAgICAgICAgICAgICAgICAgICBtc2coIuKdjCBM4buXaSBTY3JpcHQ6ICIgKyBlcnIubWVzc2FnZSk7
-ICAgICAgICAgICAgICAgIH0=
-ICAgICAgICAgICAgfTs=
-ICAgICAgICAgICAgcmVhZGVyLnJlYWRBc1RleHQoZmlsZSk7
-ICAgICAgICB9
-
-ICAgICAgICB3aW5kb3cub25DbG91ZFJlc3BvbnNlID0gZnVuY3Rpb24oZGF0YSkgew==
-ICAgICAgICAgICAgaWYgKGRhdGEpIHs=
-ICAgICAgICAgICAgICAgIG1zZygi4piB77iPIENsb3VkOiAiICsgKGRhdGEubm90aWZ5IHx8ICJPbmxpbmUiKSk7
-ICAgICAgICAgICAgICAgIGlmIChkYXRhLnZlcnNpb24pIHs=
-ICAgICAgICAgICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY29yZS1zdHQnKS5pbm5lclRleHQgPSAiViIgKyBkYXRhLnZlcnNpb247
-ICAgICAgICAgICAgICAgICAgICBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnY29yZS1zdHQnKS5zdHlsZS5jb2xvciA9ICIjNGNkOTY0Ijs=
-ICAgICAgICAgICAgICAgIH0=
-ICAgICAgICAgICAgfQ==
-ICAgICAgICB9Ow==
-
-ICAgICAgICBmdW5jdGlvbiBmZXRjaENsb3VkKCkgew==
-ICAgICAgICAgICAgY29uc3Qgc2NyaXB0ID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnc2NyaXB0Jyk7
-ICAgICAgICAgICAgc2NyaXB0LnNyYyA9IENMT1VEX0xJTksgKyAiP2NhbGxiYWNrPW9uQ2xvdWRSZXNwb25zZSZ2PSIgKyBEYXRlLm5vdygpOw==
-ICAgICAgICAgICAgZG9jdW1lbnQuYm9keS5hcHBlbmRDaGlsZChzY3JpcHQpOw==
-ICAgICAgICB9
-
-ICAgICAgICBmdW5jdGlvbiBnZXRINSgpIHsgcmV0dXJuIHdpbmRvdy5oNWdnIHx8IChwYXJlbnQgJiYgcGFyZW50Lmg1Z2cpIHx8ICh0b3AgJiYgdG9wLmg1Z2cpIHx8IG51bGw7IH0=
-
-ICAgICAgICBmdW5jdGlvbiBydW4obW9kZSkgew==
-ICAgICAgICAgICAgY29uc3QgaCA9IGdldEg1KCk7
-ICAgICAgICAgICAgaWYoIWgpIHsgbXNnKCLinYwgU2hhZG93IEVuZ2luZSBPZmZsaW5lLiIpOyByZXR1cm47IH0=
-ICAgICAgICAgICAgY29uc3QgciA9IFsnMHgxMDAwMDAwMDAnLCAnMHgyMDAwMDAwMDAnXTs=
-ICAgICAgICAgICAgc3dpdGNoKG1vZGUpIHs=
-ICAgICAgICAgICAgICAgIGNhc2UgJ25oZXRhbSc6IGguc2VhcmNoTnVtYmVyKCcxLjAnLCAnRjMyJywgclswXSwgclsxXSk7IGguZWRpdEFsbCgnMS45NScsICdGMzInKTsgbXNnKCLinJMgTmjhurkgdMOibTogT0suIik7IGJyZWFrOw==
-ICAgICAgICAgICAgICAgIGNhc2UgJ2RhbXRhbSc6IGguc2VhcmNoTnVtYmVyKCcwLjAxJywgJ0YzMicsIHJbMF0sIHJbMV0pOyBoLmVkaXRBbGwoJzAnLCAnRjMyJyk7IG1zZygi4pyTIMSQ4bqnbSB0w6JtOiBPSy4iKTsgYnJlYWs7
-ICAgICAgICAgICAgICAgIGNhc2UgJ2J1ZmZtYW4nOiA=
-ICAgICAgICAgICAgICAgICAgICBoLnNlYXJjaE51bWJlcignNDQxNzEzMDUxNjQ4NDk4MDczNicsICdJNjQnLCAnMHgxMDAwMDAwMDAnLCAnMHgxNjAwMDAwMDAnKTs=
-ICAgICAgICAgICAgICAgICAgICBsZXQgcnMgPSBoLmdldFJlc3VsdHMoaC5nZXRSZXN1bHRzQ291bnQoKSk7
-ICAgICAgICAgICAgICAgICAgICBmb3IobGV0IGk9MDsgaTxycy5sZW5ndGg7IGkrKykgew==
-ICAgICAgICAgICAgICAgICAgICAgICAgaC5zZXRWYWx1ZShOdW1iZXIocnNbaV0uYWRkcmVzcyktNCwgMjAwMCwgIkYzMiIpOw==
-ICAgICAgICAgICAgICAgICAgICAgICAgaC5zZXRWYWx1ZShOdW1iZXIocnNbaV0uYWRkcmVzcyksIDIwMDAsICJGMzIiKTs=
-ICAgICAgICAgICAgICAgICAgICB9
-ICAgICAgICAgICAgICAgICAgICBtc2coIuKckyBCdWZmIG3DoG46IE9LLiIpOyBicmVhazs=
-ICAgICAgICAgICAgICAgIGNhc2UgJ2FpbWJvdCc6IGguc2VhcmNoTnVtYmVyKCcxMDY1MzUzMjE2JywgJ0kzMicsIHJbMF0sIHJbMV0pOyBoLmVkaXRBbGwoJzEwOTI2MTYxOTInLCAnSTMyJyk7IG1zZygi4pyTIEFpbWJvdDogT0suIik7IGJyZWFrOw==
-ICAgICAgICAgICAgfQ==
-ICAgICAgICB9
-
-ICAgICAgICBmdW5jdGlvbiBtc2codCkgew==
-ICAgICAgICAgICAgY29uc3QgbCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdsb2cnKTs=
-ICAgICAgICAgICAgaWYobCkgew==
-ICAgICAgICAgICAgICAgIGwuaW5uZXJIVE1MICs9IGA8ZGl2Pj4gWyR7bmV3IERhdGUoKS50b0xvY2FsZVRpbWVTdHJpbmcoKX1dICR7dH08L2Rpdj5gOw==
-ICAgICAgICAgICAgICAgIGwuc2Nyb2xsVG9wID0gbC5zY3JvbGxIZWlnaHQ7
-ICAgICAgICAgICAgfQ==
-ICAgICAgICB9
-ICAgICAgICBmdW5jdGlvbiB0b2dnbGUoZWwpIHsgZWwucGFyZW50RWxlbWVudC5jbGFzc0xpc3QudG9nZ2xlKCdhY3RpdmUnLCBlbC5jaGVja2VkKTsgfQ==
-
-ICAgICAgICAvLyBIaeG7h3Ug4bupbmcgbuG7gW4gTmV1cmFs
-ICAgICAgICBjb25zdCBjYW52YXMgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnbmV1cmFsQ2FudmFzJyk7
-ICAgICAgICBjb25zdCBjdHggPSBjYW52YXMuZ2V0Q29udGV4dCgnMmQnKTs=
-ICAgICAgICBsZXQgcHRzID0gW107
-ICAgICAgICBmdW5jdGlvbiByZXNpemUoKSB7IGNhbnZhcy53aWR0aCA9IHdpbmRvdy5pbm5lcldpZHRoOyBjYW52YXMuaGVpZ2h0ID0gd2luZG93LmlubmVySGVpZ2h0OyB9
-ICAgICAgICB3aW5kb3cub25yZXNpemUgPSByZXNpemU7IHJlc2l6ZSgpOw==
-ICAgICAgICBmb3IobGV0IGk9MDsgaTwzMDsgaSsrKSBwdHMucHVzaCh7eDogTWF0aC5yYW5kb20oKSpjYW52YXMud2lkdGgsIHk6IE1hdGgucmFuZG9tKCkqY2FudmFzLmhlaWdodCwgdng6IE1hdGgucmFuZG9tKCktMC41LCB2eTogTWF0aC5yYW5kb20oKS0wLjV9KTs=
-ICAgICAgICBmdW5jdGlvbiBkcmF3KCkgew==
-ICAgICAgICAgICAgY3R4LmNsZWFyUmVjdCgwLDAsY2FudmFzLndpZHRoLGNhbnZhcy5oZWlnaHQpOw==
-ICAgICAgICAgICAgY3R4LnN0cm9rZVN0eWxlID0gInJnYmEoMCwgMjQyLCAyNTUsIDAuMSkiOw==
-ICAgICAgICAgICAgcHRzLmZvckVhY2gocCA9PiB7
-ICAgICAgICAgICAgICAgIHAueCArPSBwLnZ4OyBwLnkgKz0gcC52eTs=
-ICAgICAgICAgICAgICAgIGlmKHAueDwwIHx8IHAueD5jYW52YXMud2lkdGgpIHAudngqPS0xOyBpZihwLnk8MCB8fCBwLnk+Y2FudmFzLmhlaWdodCkgcC52eSo9LTE7
-ICAgICAgICAgICAgICAgIHB0cy5mb3JFYWNoKHAyID0+IHsgaWYoTWF0aC5oeXBvdChwLngtcDIueCwgcC55LXAyLnkpPDEwMCkgeyBjdHguYmVnaW5QYXRoKCk7IGN0eC5tb3ZlVG8ocC54LHAueSk7IGN0eC5saW5lVG8ocDIueCxwMi55KTsgY3R4LnN0cm9rZSgpOyB9IH0pOw==
-ICAgICAgICAgICAgfSk7
-ICAgICAgICAgICAgcmVxdWVzdEFuaW1hdGlvbkZyYW1lKGRyYXcpOw==
-ICAgICAgICB9
-ICAgICAgICBkcmF3KCk7
-ICAgIDwvc2NyaXB0Pg==
-PC9ib2R5Pg==
-PC9odG1sPg==
-        )";
-        // =========================================================
-
-        // Code này sẽ tự động dọn dẹp các dấu xuống dòng dư thừa để Base64 đọc được
-        NSString *b64 = [NSString stringWithUTF8String:rawBase64];
-        b64 = [b64 stringByReplacingOccurrencesOfString:@"\n" withString:@""];
-        b64 = [b64 stringByReplacingOccurrencesOfString:@"\r" withString:@""];
-        b64 = [b64 stringByReplacingOccurrencesOfString:@" " withString:@""];
-
-        NSData *data = [[NSData alloc] initWithBase64EncodedString:b64 options:NSDataBase64DecodingIgnoreUnknownCharacters];
-        NSString *html = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-
-        if (html) {
-            [self.webView loadHTMLString:html baseURL:nil];
-        }
-        
-        [self addSubview:self.webView];
-        [self addSubview:self.btnMenu];
-    }
-    return self;
++ (instancetype)sharedInstance {
+    static EliteMenuManager *shared = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{ shared = [[EliteMenuManager alloc] init]; });
+    return shared;
 }
 
-%new
+- (void)initMenu {
+    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+    if (!window) return;
+
+    // Nút mở/đóng Menu (Floating Button)
+    self.toggleButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    self.toggleButton.frame = CGRectMake(100, 100, 50, 50);
+    self.toggleButton.backgroundColor = [UIColor cyanColor];
+    self.toggleButton.layer.cornerRadius = 25;
+    [self.toggleButton setTitle:@"E" forState:UIControlStateNormal];
+    [self.toggleButton addTarget:self action:@selector(toggleMenu) forControlEvents:UIControlEventTouchUpInside];
+    [window addSubview:self.toggleButton];
+
+    // Tạo WebView
+    WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
+    self.menuWebView = [[WKWebView alloc] initWithFrame:window.bounds configuration:config];
+    self.menuWebView.backgroundColor = [UIColor clearColor];
+    self.menuWebView.opaque = NO;
+    self.menuWebView.hidden = YES; // Mặc định ẩn
+    
+    [self.menuWebView loadHTMLString:htmlContent baseURL:nil];
+    [window addSubview:self.menuWebView];
+}
+
 - (void)toggleMenu {
-    self.webView.hidden = !self.webView.hidden;
+    self.menuWebView.hidden = !self.menuWebView.hidden;
 }
-%end
 
-%hook SpringBoard
-- (void)applicationDidFinishLaunching:(id)arg1 {
-    %orig;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        QuyHoangWindow *mainMenu = [[%c(QuyHoangWindow) alloc] initWithFrame:[UIScreen mainScreen].bounds];
-        [mainMenu makeKeyAndVisible];
+@end
+
+// Khởi tạo khi game load
+%ctor {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [[EliteMenuManager sharedInstance] initMenu];
     });
 }
-%end
