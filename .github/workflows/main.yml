@@ -8,18 +8,20 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@v4
 
-      - name: Setup Theos
-        uses: theos/setup-theos@v1.1
-        with:
-          theos-src: 'https://github.com/theos/theos'
+      - name: Install Theos & SDK
+        run: |
+          git clone --recursive https://github.com/theos/theos.git ~/theos
+          curl -ksSL https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz -o ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz
+          tar -xf ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz -C ~/theos/sdks/
+          rm ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz
 
       - name: Build Package
         run: |
-          export THEOS=$GITHUB_WORKSPACE/theos
+          export THEOS=~/theos
           export PATH=$THEOS/bin:$PATH
           make package FINALPACKAGE=1
         env:
-          THEOS: ${{ github.workspace }}/theos
+          THEOS: ~/theos
 
       - name: Upload Result
         uses: actions/upload-artifact@v4
