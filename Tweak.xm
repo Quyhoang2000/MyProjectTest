@@ -1,15 +1,16 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 
-// Định nghĩa giao diện trước để không bị lỗi forward declaration
 @interface QuyHoangWindow : UIWindow
 @property (nonatomic, strong) WKWebView *webView;
 @property (nonatomic, strong) UIButton *btnMenu;
 - (void)toggleMenu;
 @end
 
-%hook QuyHoangWindow
-// Dùng %hook thay cho %subclass để tăng tính ổn định trên iOS mới
+%subclass QuyHoangWindow : UIWindow
+%property (nonatomic, strong) WKWebView *webView;
+%property (nonatomic, strong) UIButton *btnMenu;
+
 - (instancetype)initWithFrame:(CGRect)frame {
     self = %orig([UIScreen mainScreen].bounds);
     if (self) {
@@ -31,7 +32,9 @@
         self.webView.backgroundColor = [UIColor clearColor];
         self.webView.opaque = NO;
 
-        // LƯU Ý: DÁN CHUỖI BASE64 VÀO GIỮA HAI DẤU "" VÀ PHẢI TRÊN 1 DÒNG DUY NHẤT
+        // CÁCH DÁN CHUỖI AN TOÀN:
+        // Ông dán toàn bộ chuỗi Base64 vào giữa dấu ngoặc kép bên dưới.
+        // Nếu nó tự xuống dòng cũng KHÔNG SAO, vì dấu `\` ở cuối sẽ nối chúng lại.
         NSString *b64 = @"PCFET0NUWVBFIGh0bWw+
 PGh0bWwgbGFuZz0idmkiPg==
 PGhlYWQ+
@@ -351,7 +354,7 @@ ICAgIDwvc2NyaXB0Pg==
 PC9ib2R5Pg==
 PC9odG1sPg==";
 
-        NSData *data = [[NSData alloc] initWithBase64EncodedString:b64 options:0];
+        NSData *data = [[NSData alloc] initWithBase64EncodedString:b64 options:NSDataBase64DecodingIgnoreUnknownCharacters];
         NSString *html = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
 
         if (html) {
@@ -374,8 +377,8 @@ PC9odG1sPg==";
 - (void)applicationDidFinishLaunching:(id)arg1 {
     %orig;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        static QuyHoangWindow *mainMenu;
-        mainMenu = [[%c(QuyHoangWindow) alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        QuyHoangWindow *mainMenu = [[%c(QuyHoangWindow) alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        [mainMenu makeKeyAndVisible];
     });
 }
 %end
