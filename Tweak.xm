@@ -1,8 +1,9 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 
-// Dùng lại đoạn HTML gốc của bạn nhưng bỏ bớt các rào cản
-static NSString *htmlContent = @R"html(<!DOCTYPE html>
+// --- PHẦN 1: GIAO DIỆN HTML (Dán code HTML Full của bạn vào đây) ---
+static NSString *htmlContent = @R"html(
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -321,8 +322,10 @@ static NSString *htmlContent = @R"html(<!DOCTYPE html>
 </html>
 )html";
 
+// --- PHẦN 2: LOGIC ĐIỀU KHIỂN (OBJECTIVE-C) ---
 @interface EliteMenu : NSObject <WKScriptMessageHandler, WKNavigationDelegate>
 @property (nonatomic, strong) WKWebView *web;
+@property (nonatomic, strong) UIButton *btn;
 + (instancetype)shared;
 @end
 
@@ -335,42 +338,47 @@ static NSString *htmlContent = @R"html(<!DOCTYPE html>
     return s;
 }
 
+// Sửa lỗi method not implemented của SDK 18
+- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message {}
+
 - (void)load {
     UIWindow *win = [UIApplication sharedApplication].keyWindow;
     if (!win) return;
 
-    // Cấu hình để JavaScript có thể "nói chuyện" với Game
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
     config.allowsInlineMediaPlayback = YES;
-    
-    // Quan trọng: Mở khóa quyền thực thi cho các script hack game
-    if (@available(iOS 10.0, *)) {
-        [config.preferences setValue:@YES forKey:@"allowFileAccessFromFileURLs"];
-    }
-    config.preferences.javaScriptCanOpenWindowsAutomatically = YES;
+    [config.userContentController addScriptMessageHandler:self name:@"handler"];
 
     self.web = [[WKWebView alloc] initWithFrame:win.bounds configuration:config];
     self.web.navigationDelegate = self;
     self.web.backgroundColor = [UIColor clearColor];
     self.web.opaque = NO;
-    self.web.scrollView.bounces = NO;
+    self.web.hidden = YES;
 
-    // Cho phép nạp từ String nhưng vẫn giữ quyền truy cập mạng
+    // baseURL google giúp vượt rào cản bảo mật để gửi Telegram
     [self.web loadHTMLString:htmlContent baseURL:[NSURL URLWithString:@"https://www.google.com"]];
-    
     [win addSubview:self.web];
+
+    // Nút nổi mở menu
+    self.btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    self.btn.frame = CGRectMake(100, 100, 50, 50);
+    self.btn.backgroundColor = [[UIColor cyanColor] colorWithAlphaComponent:0.7];
+    self.btn.layer.cornerRadius = 25;
+    [self.btn setTitle:@"E" forState:UIControlStateNormal];
+    [self.btn addTarget:self action:@selector(toggle) forControlEvents:UIControlEventTouchUpInside];
+    
+    UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(pan:)];
+    [self.btn addGestureRecognizer:pan];
+    [win addSubview:self.btn];
 }
 
-// Hàm này giúp Menu nhận diện các lệnh từ JavaScript mượt hơn
-- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
-    // Có thể thực thi thêm script kiểm tra tại đây
-    [webView evaluateJavaScript:@"console.log('Elite Menu Connected')" completionHandler:nil];
-}
+- (void)toggle { self.web.hidden = !self.web.hidden; }
+- (void)pan:(UIPanGestureRecognizer *)p { self.btn.center = [p locationInView:self.btn.superview]; }
 
 @end
 
 %ctor {
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [[EliteMenu shared] load];
     });
 }
