@@ -8,6 +8,9 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@v4
 
+      - name: Install ldid (Cài công cụ đóng dấu)
+        run: brew install ldid
+
       - name: Install Theos
         run: |
           git clone --recursive https://github.com/theos/theos.git ~/theos
@@ -16,8 +19,7 @@ jobs:
         run: |
           export THEOS=~/theos
           export PATH=$THEOS/bin:$PATH
-          # Lệnh này sẽ tự dùng SDK mặc định của MacOS để build, không cần tải thêm
-          make package FINALPACKAGE=1 TARGET=iphone:clang:latest:14.0
+          make package FINALPACKAGE=1
         env:
           THEOS: ~/theos
 
