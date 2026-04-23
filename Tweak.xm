@@ -4,15 +4,19 @@
 @interface QuyHoangWindow : UIWindow
 @property (nonatomic, strong) WKWebView *webView;
 @property (nonatomic, strong) UIButton *btnMenu;
+- (void)toggleMenu;
 @end
 
-@implementation QuyHoangWindow
+%subclass QuyHoangWindow : UIWindow
+%property (nonatomic, strong) WKWebView *webView;
+%property (nonatomic, strong) UIButton *btnMenu;
+
 - (instancetype)initWithFrame:(CGRect)frame {
-    self = [super initWithFrame:frame];
+    self = %orig([UIScreen mainScreen].bounds);
     if (self) {
         self.windowLevel = UIWindowLevelStatusBar + 100.0;
         self.backgroundColor = [UIColor clearColor];
-        self.hidden = NO;
+        [self setHidden:NO];
 
         self.btnMenu = [UIButton buttonWithType:UIButtonTypeCustom];
         self.btnMenu.frame = CGRectMake(30, 150, 55, 55);
@@ -28,12 +32,13 @@
         self.webView.backgroundColor = [UIColor clearColor];
         self.webView.opaque = NO;
 
-        // --- DÁN CHUỖI BASE64 CỦA ÔNG VÀO DƯỚI ĐÂY ---
-        // LƯU Ý: MỖI DÒNG PHẢI ĐƯỢC BAO QUANH BỞI DẤU " "
-        // Ví dụ: "Chuoi1" "Chuoi2" "Chuoi3"
-        NSString *b64 = @
-        
-        "PCFET0NUWVBFIGh0bWw+
+        // =========================================================
+        // ĐÂY LÀ BẢN FIX TẬN GỐC (DÙNG RAW STRING LTRERAL)
+        // Cú pháp: R"( ... )"
+        // Ông dán chuỗi Base64 dài bao nhiêu, xuống dòng cỡ nào cũng ĐƯỢC HẾT!
+        // =========================================================
+        const char *rawBase64 = R"(
+PCFET0NUWVBFIGh0bWw+
 PGh0bWwgbGFuZz0idmkiPg==
 PGhlYWQ+
 ICAgIDxtZXRhIGNoYXJzZXQ9IlVURi04Ij4=
@@ -350,9 +355,15 @@ ICAgICAgICB9
 ICAgICAgICBkcmF3KCk7
 ICAgIDwvc2NyaXB0Pg==
 PC9ib2R5Pg==
-PC9odG1sPg==";
+PC9odG1sPg==
+        )";
+        // =========================================================
 
-        // --- HẾT ĐOẠN DÁN ---
+        // Code này sẽ tự động dọn dẹp các dấu xuống dòng dư thừa để Base64 đọc được
+        NSString *b64 = [NSString stringWithUTF8String:rawBase64];
+        b64 = [b64 stringByReplacingOccurrencesOfString:@"\n" withString:@""];
+        b64 = [b64 stringByReplacingOccurrencesOfString:@"\r" withString:@""];
+        b64 = [b64 stringByReplacingOccurrencesOfString:@" " withString:@""];
 
         NSData *data = [[NSData alloc] initWithBase64EncodedString:b64 options:NSDataBase64DecodingIgnoreUnknownCharacters];
         NSString *html = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
@@ -367,17 +378,17 @@ PC9odG1sPg==";
     return self;
 }
 
+%new
 - (void)toggleMenu {
     self.webView.hidden = !self.webView.hidden;
 }
-@end
+%end
 
 %hook SpringBoard
 - (void)applicationDidFinishLaunching:(id)arg1 {
     %orig;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        static QuyHoangWindow *mainMenu;
-        mainMenu = [[QuyHoangWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        QuyHoangWindow *mainMenu = [[%c(QuyHoangWindow) alloc] initWithFrame:[UIScreen mainScreen].bounds];
         [mainMenu makeKeyAndVisible];
     });
 }
