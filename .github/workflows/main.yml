@@ -8,18 +8,16 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@v4
 
-      - name: Install Theos & SDK
+      - name: Install Theos
         run: |
           git clone --recursive https://github.com/theos/theos.git ~/theos
-          curl -ksSL https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz -o ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz
-          tar -xf ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz -C ~/theos/sdks/
-          rm ~/theos/sdks/iPhoneOS14.5.sdk.tar.xz
 
       - name: Build Package
         run: |
           export THEOS=~/theos
           export PATH=$THEOS/bin:$PATH
-          make package FINALPACKAGE=1
+          # Lệnh này sẽ tự dùng SDK mặc định của MacOS để build, không cần tải thêm
+          make package FINALPACKAGE=1 TARGET=iphone:clang:latest:14.0
         env:
           THEOS: ~/theos
 
