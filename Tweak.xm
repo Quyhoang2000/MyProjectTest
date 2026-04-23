@@ -1,7 +1,7 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 
-// --- PHẦN 1: DÁN TOÀN BỘ HTML CỦA BẠN VÀO ĐÂY ---
+// --- HTML CONTENT (Dán code của bạn vào đây) ---
 static NSString *htmlContent = @R"html(
 <!DOCTYPE html>
 <html lang="vi">
@@ -320,58 +320,81 @@ static NSString *htmlContent = @R"html(
         draw();
     </script>
 </body>
-</html>
-)html";
+</html>)html";
 
-// --- PHẦN 2: MÃ HOOK ĐỂ HIỂN THỊ MENU ---
-@interface EliteMenuManager : NSObject <WKNavigationDelegate>
-@property (nonatomic, strong) WKWebView *menuWebView;
-@property (nonatomic, strong) UIButton *toggleButton;
-+ (instancetype)sharedInstance;
+// --- LOGIC QUẢN LÝ MENU (SỬA LỖI KEYWINDOW) ---
+@interface EliteManager : NSObject <WKNavigationDelegate>
+@property (nonatomic, strong) WKWebView *webView;
+@property (nonatomic, strong) UIButton *floatBtn;
++ (instancetype)shared;
 @end
 
-@implementation EliteMenuManager
+@implementation EliteManager
 
-+ (instancetype)sharedInstance {
-    static EliteMenuManager *shared = nil;
++ (instancetype)shared {
+    static EliteManager *instance = nil;
     static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{ shared = [[EliteMenuManager alloc] init]; });
-    return shared;
+    dispatch_once(&onceToken, ^{ instance = [[EliteManager alloc] init]; });
+    return instance;
 }
 
-- (void)initMenu {
-    UIWindow *window = [UIApplication sharedApplication].keyWindow;
+- (void)setupMenu {
+    UIWindow *window = nil;
+    
+    // Fix lỗi deprecated keyWindow cho iOS 13+
+    if (@available(iOS 13.0, *)) {
+        for (UIWindowScene* scene in [UIApplication sharedApplication].connectedScenes) {
+            if (scene.activationState == UISceneActivationStateForegroundActive) {
+                for (UIWindow *w in scene.windows) {
+                    if (w.isKeyWindow) { window = w; break; }
+                }
+            }
+        }
+    }
+    if (!window) window = [UIApplication sharedApplication].keyWindow;
     if (!window) return;
 
-    // Nút mở/đóng Menu (Floating Button)
-    self.toggleButton = [UIButton buttonWithType:UIButtonTypeCustom];
-    self.toggleButton.frame = CGRectMake(100, 100, 50, 50);
-    self.toggleButton.backgroundColor = [UIColor cyanColor];
-    self.toggleButton.layer.cornerRadius = 25;
-    [self.toggleButton setTitle:@"E" forState:UIControlStateNormal];
-    [self.toggleButton addTarget:self action:@selector(toggleMenu) forControlEvents:UIControlEventTouchUpInside];
-    [window addSubview:self.toggleButton];
-
-    // Tạo WebView
-    WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
-    self.menuWebView = [[WKWebView alloc] initWithFrame:window.bounds configuration:config];
-    self.menuWebView.backgroundColor = [UIColor clearColor];
-    self.menuWebView.opaque = NO;
-    self.menuWebView.hidden = YES; // Mặc định ẩn
+    // Nút nổi (Floating Button)
+    self.floatBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    self.floatBtn.frame = CGRectMake(100, 100, 55, 55);
+    self.floatBtn.backgroundColor = [UIColor colorWithRed:0 green:0.95 blue:1.0 alpha:0.8];
+    self.floatBtn.layer.cornerRadius = 27.5;
+    self.floatBtn.layer.shadowColor = [UIColor cyanColor].CGColor;
+    self.floatBtn.layer.shadowRadius = 10;
+    self.floatBtn.layer.shadowOpacity = 0.5;
+    [self.floatBtn setTitle:@"E" forState:UIControlStateNormal];
+    [self.floatBtn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [self.floatBtn addTarget:self action:@selector(toggleMenu) forControlEvents:UIControlEventTouchUpInside];
     
-    [self.menuWebView loadHTMLString:htmlContent baseURL:nil];
-    [window addSubview:self.menuWebView];
+    // Cho phép kéo nút nổi
+    UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+    [self.floatBtn addGestureRecognizer:pan];
+    [window addSubview:self.floatBtn];
+
+    // WebView Menu
+    self.webView = [[WKWebView alloc] initWithFrame:window.bounds];
+    self.webView.backgroundColor = [UIColor clearColor];
+    self.webView.opaque = NO;
+    self.webView.hidden = YES;
+    self.webView.layer.zPosition = 9999;
+    
+    [self.webView loadHTMLString:htmlContent baseURL:nil];
+    [window addSubview:self.webView];
 }
 
 - (void)toggleMenu {
-    self.menuWebView.hidden = !self.menuWebView.hidden;
+    self.webView.hidden = !self.webView.hidden;
 }
 
+- (void)handlePan:(UIPanGestureRecognizer *)p {
+    CGPoint loc = [p locationInView:self.floatBtn.superview];
+    self.floatBtn.center = loc;
+}
 @end
 
-// Khởi tạo khi game load
+// Kích hoạt khi Game mở
 %ctor {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [[EliteMenuManager sharedInstance] initMenu];
+        [[EliteManager shared] setupMenu];
     });
 }
