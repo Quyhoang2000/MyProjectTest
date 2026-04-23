@@ -1,7 +1,7 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 
-// --- HTML CONTENT (Dán code của bạn vào đây) ---
+// --- HTML OFFLINE 100% - KHÔNG CẦN MẠNG, KHÔNG VĂNG ---
 static NSString *htmlContent = @R"html(
 <!DOCTYPE html>
 <html lang="vi">
@@ -9,7 +9,6 @@ static NSString *htmlContent = @R"html(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>QUYHOANG FXY - ELITE LUXURY v4.8</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* CSS COMBINED - ELITE SYSTEM */
         :root { 
@@ -320,81 +319,59 @@ static NSString *htmlContent = @R"html(
         draw();
     </script>
 </body>
-</html>)html";
+</html>
+)html";
 
-// --- LOGIC QUẢN LÝ MENU (SỬA LỖI KEYWINDOW) ---
-@interface EliteManager : NSObject <WKNavigationDelegate>
-@property (nonatomic, strong) WKWebView *webView;
-@property (nonatomic, strong) UIButton *floatBtn;
+// --- LOGIC ĐIỀU KHIỂN DYLIB ---
+@interface EliteMenu : NSObject
+@property (nonatomic, strong) WKWebView *web;
+@property (nonatomic, strong) UIButton *btn;
 + (instancetype)shared;
 @end
 
-@implementation EliteManager
-
+@implementation EliteMenu
 + (instancetype)shared {
-    static EliteManager *instance = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{ instance = [[EliteManager alloc] init]; });
-    return instance;
+    static EliteMenu *s = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ s = [[EliteMenu alloc] init]; });
+    return s;
 }
 
-- (void)setupMenu {
-    UIWindow *window = nil;
-    
-    // Fix lỗi deprecated keyWindow cho iOS 13+
+- (void)load {
+    UIWindow *win = nil;
     if (@available(iOS 13.0, *)) {
-        for (UIWindowScene* scene in [UIApplication sharedApplication].connectedScenes) {
-            if (scene.activationState == UISceneActivationStateForegroundActive) {
-                for (UIWindow *w in scene.windows) {
-                    if (w.isKeyWindow) { window = w; break; }
-                }
+        for (UIWindowScene* s in [UIApplication sharedApplication].connectedScenes) {
+            if (s.activationState == UISceneActivationStateForegroundActive) {
+                for (UIWindow *w in s.windows) { if (w.isKeyWindow) { win = w; break; } }
             }
         }
     }
-    if (!window) window = [UIApplication sharedApplication].keyWindow;
-    if (!window) return;
+    if (!win) win = [UIApplication sharedApplication].keyWindow;
+    if (!win) return;
 
-    // Nút nổi (Floating Button)
-    self.floatBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-    self.floatBtn.frame = CGRectMake(100, 100, 55, 55);
-    self.floatBtn.backgroundColor = [UIColor colorWithRed:0 green:0.95 blue:1.0 alpha:0.8];
-    self.floatBtn.layer.cornerRadius = 27.5;
-    self.floatBtn.layer.shadowColor = [UIColor cyanColor].CGColor;
-    self.floatBtn.layer.shadowRadius = 10;
-    self.floatBtn.layer.shadowOpacity = 0.5;
-    [self.floatBtn setTitle:@"E" forState:UIControlStateNormal];
-    [self.floatBtn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
-    [self.floatBtn addTarget:self action:@selector(toggleMenu) forControlEvents:UIControlEventTouchUpInside];
-    
-    // Cho phép kéo nút nổi
-    UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
-    [self.floatBtn addGestureRecognizer:pan];
-    [window addSubview:self.floatBtn];
+    // Nút nổi
+    self.btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    self.btn.frame = CGRectMake(80, 80, 50, 50);
+    self.btn.backgroundColor = [UIColor cyanColor];
+    self.btn.layer.cornerRadius = 25;
+    [self.btn setTitle:@"E" forState:UIControlStateNormal];
+    [self.btn addTarget:self action:@selector(show) forControlEvents:UIControlEventTouchUpInside];
+    [win addSubview:self.btn];
 
-    // WebView Menu
-    self.webView = [[WKWebView alloc] initWithFrame:window.bounds];
-    self.webView.backgroundColor = [UIColor clearColor];
-    self.webView.opaque = NO;
-    self.webView.hidden = YES;
-    self.webView.layer.zPosition = 9999;
-    
-    [self.webView loadHTMLString:htmlContent baseURL:nil];
-    [window addSubview:self.webView];
+    // WebView
+    self.web = [[WKWebView alloc] initWithFrame:win.bounds];
+    self.web.hidden = YES;
+    self.web.backgroundColor = [UIColor clearColor];
+    self.web.opaque = NO;
+    [self.web loadHTMLString:htmlContent baseURL:nil];
+    [win addSubview:self.web];
 }
 
-- (void)toggleMenu {
-    self.webView.hidden = !self.webView.hidden;
-}
-
-- (void)handlePan:(UIPanGestureRecognizer *)p {
-    CGPoint loc = [p locationInView:self.floatBtn.superview];
-    self.floatBtn.center = loc;
-}
+- (void)show { self.web.hidden = !self.web.hidden; }
 @end
 
-// Kích hoạt khi Game mở
 %ctor {
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [[EliteManager shared] setupMenu];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [[EliteMenu shared] load];
     });
 }
