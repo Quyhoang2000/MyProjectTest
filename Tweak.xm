@@ -1,14 +1,15 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 
-// --- PHẦN 1: GIAO DIỆN HTML (Dán code HTML Full của bạn vào đây) ---
+// --- HTML CONTENT (GIỮ NGUYÊN CODE CỦA BẠN NHƯNG FIX ĐƯỜNG DẪN) ---
 static NSString *htmlContent = @R"html(
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QUYHOANG FXY - ELITE LUXURY v4.8</title>
+    <title>Elite Auth - Premium</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* CSS COMBINED - ELITE SYSTEM */
         :root { 
@@ -322,10 +323,10 @@ static NSString *htmlContent = @R"html(
 </html>
 )html";
 
-// --- PHẦN 2: LOGIC ĐIỀU KHIỂN (OBJECTIVE-C) ---
 @interface EliteMenu : NSObject <WKScriptMessageHandler, WKNavigationDelegate>
 @property (nonatomic, strong) WKWebView *web;
 @property (nonatomic, strong) UIButton *btn;
+@property (nonatomic, strong) UIWindow *window;
 + (instancetype)shared;
 @end
 
@@ -338,42 +339,64 @@ static NSString *htmlContent = @R"html(
     return s;
 }
 
-// Sửa lỗi method not implemented của SDK 18
+// Fix lỗi SDK 18 - Quan trọng để không bị lỗi build
 - (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message {}
 
 - (void)load {
-    UIWindow *win = [UIApplication sharedApplication].keyWindow;
-    if (!win) return;
+    self.window = [UIApplication sharedApplication].keyWindow;
+    if (!self.window) return;
 
+    // CẤU HÌNH WEBVIEW GIỐNG H5GG
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
     config.allowsInlineMediaPlayback = YES;
+    
+    // Mở quyền truy cập script cực mạnh
+    WKPreferences *prefs = [[WKPreferences alloc] init];
+    prefs.javaScriptCanOpenWindowsAutomatically = YES;
+    config.preferences = prefs;
+    
     [config.userContentController addScriptMessageHandler:self name:@"handler"];
 
-    self.web = [[WKWebView alloc] initWithFrame:win.bounds configuration:config];
+    // Khởi tạo WebView full màn hình nhưng tạm ẩn
+    self.web = [[WKWebView alloc] initWithFrame:self.window.bounds configuration:config];
     self.web.navigationDelegate = self;
     self.web.backgroundColor = [UIColor clearColor];
     self.web.opaque = NO;
     self.web.hidden = YES;
+    self.web.scrollView.bounces = NO;
 
-    // baseURL google giúp vượt rào cản bảo mật để gửi Telegram
+    // Load HTML với baseURL để cho phép Fetch/XHR (Fix lỗi "chỉ xem")
     [self.web loadHTMLString:htmlContent baseURL:[NSURL URLWithString:@"https://www.google.com"]];
-    [win addSubview:self.web];
+    [self.window addSubview:self.web];
 
-    // Nút nổi mở menu
+    // NÚT NỔI (FLOAT BUTTON)
     self.btn = [UIButton buttonWithType:UIButtonTypeCustom];
-    self.btn.frame = CGRectMake(100, 100, 50, 50);
-    self.btn.backgroundColor = [[UIColor cyanColor] colorWithAlphaComponent:0.7];
-    self.btn.layer.cornerRadius = 25;
-    [self.btn setTitle:@"E" forState:UIControlStateNormal];
+    self.btn.frame = CGRectMake(100, 100, 60, 60);
+    self.btn.layer.cornerRadius = 30;
+    self.btn.backgroundColor = [[UIColor cyanColor] colorWithAlphaComponent:0.8];
+    [self.btn setTitle:@"Elite" forState:UIControlStateNormal];
+    self.btn.titleLabel.font = [UIFont boldSystemFontOfSize:14];
+    [self.btn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    
     [self.btn addTarget:self action:@selector(toggle) forControlEvents:UIControlEventTouchUpInside];
     
-    UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(pan:)];
+    // Thêm kéo thả cho nút
+    UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     [self.btn addGestureRecognizer:pan];
-    [win addSubview:self.btn];
+    
+    [self.window addSubview:self.btn];
 }
 
-- (void)toggle { self.web.hidden = !self.web.hidden; }
-- (void)pan:(UIPanGestureRecognizer *)p { self.btn.center = [p locationInView:self.btn.superview]; }
+- (void)toggle {
+    self.web.hidden = !self.web.hidden;
+    // Khi hiện menu thì khóa cảm ứng game phía dưới
+    self.web.userInteractionEnabled = !self.web.hidden;
+}
+
+- (void)handlePan:(UIPanGestureRecognizer *)p {
+    CGPoint loc = [p locationInView:self.window];
+    self.btn.center = loc;
+}
 
 @end
 
