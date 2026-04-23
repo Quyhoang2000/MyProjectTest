@@ -1,5 +1,5 @@
 {
     Filter = {
-        Bundles = ( "com.apple.springboard" );
+        Bundles = ( "com.dts.freefireth", "com.dts.freefiremax" );
     };
 }
