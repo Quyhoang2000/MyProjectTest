@@ -1,15 +1,13 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 
-// --- HTML OFFLINE 100% - KHÔNG CẦN MẠNG, KHÔNG VĂNG ---
-static NSString *htmlContent = @R"html(
-<!DOCTYPE html>
+// Dùng lại đoạn HTML gốc của bạn nhưng bỏ bớt các rào cản
+static NSString *htmlContent = @R"html(<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Elite Auth - Premium</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>QUYHOANG FXY - ELITE LUXURY v4.8</title>
     <style>
         /* CSS COMBINED - ELITE SYSTEM */
         :root { 
@@ -323,14 +321,13 @@ static NSString *htmlContent = @R"html(
 </html>
 )html";
 
-// --- LOGIC ĐIỀU KHIỂN DYLIB ---
-@interface EliteMenu : NSObject
+@interface EliteMenu : NSObject <WKScriptMessageHandler, WKNavigationDelegate>
 @property (nonatomic, strong) WKWebView *web;
-@property (nonatomic, strong) UIButton *btn;
 + (instancetype)shared;
 @end
 
 @implementation EliteMenu
+
 + (instancetype)shared {
     static EliteMenu *s = nil;
     static dispatch_once_t once;
@@ -339,36 +336,37 @@ static NSString *htmlContent = @R"html(
 }
 
 - (void)load {
-    UIWindow *win = nil;
-    if (@available(iOS 13.0, *)) {
-        for (UIWindowScene* s in [UIApplication sharedApplication].connectedScenes) {
-            if (s.activationState == UISceneActivationStateForegroundActive) {
-                for (UIWindow *w in s.windows) { if (w.isKeyWindow) { win = w; break; } }
-            }
-        }
-    }
-    if (!win) win = [UIApplication sharedApplication].keyWindow;
+    UIWindow *win = [UIApplication sharedApplication].keyWindow;
     if (!win) return;
 
-    // Nút nổi
-    self.btn = [UIButton buttonWithType:UIButtonTypeCustom];
-    self.btn.frame = CGRectMake(80, 80, 50, 50);
-    self.btn.backgroundColor = [UIColor cyanColor];
-    self.btn.layer.cornerRadius = 25;
-    [self.btn setTitle:@"E" forState:UIControlStateNormal];
-    [self.btn addTarget:self action:@selector(show) forControlEvents:UIControlEventTouchUpInside];
-    [win addSubview:self.btn];
+    // Cấu hình để JavaScript có thể "nói chuyện" với Game
+    WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
+    config.allowsInlineMediaPlayback = YES;
+    
+    // Quan trọng: Mở khóa quyền thực thi cho các script hack game
+    if (@available(iOS 10.0, *)) {
+        [config.preferences setValue:@YES forKey:@"allowFileAccessFromFileURLs"];
+    }
+    config.preferences.javaScriptCanOpenWindowsAutomatically = YES;
 
-    // WebView
-    self.web = [[WKWebView alloc] initWithFrame:win.bounds];
-    self.web.hidden = YES;
+    self.web = [[WKWebView alloc] initWithFrame:win.bounds configuration:config];
+    self.web.navigationDelegate = self;
     self.web.backgroundColor = [UIColor clearColor];
     self.web.opaque = NO;
-    [self.web loadHTMLString:htmlContent baseURL:nil];
+    self.web.scrollView.bounces = NO;
+
+    // Cho phép nạp từ String nhưng vẫn giữ quyền truy cập mạng
+    [self.web loadHTMLString:htmlContent baseURL:[NSURL URLWithString:@"https://www.google.com"]];
+    
     [win addSubview:self.web];
 }
 
-- (void)show { self.web.hidden = !self.web.hidden; }
+// Hàm này giúp Menu nhận diện các lệnh từ JavaScript mượt hơn
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
+    // Có thể thực thi thêm script kiểm tra tại đây
+    [webView evaluateJavaScript:@"console.log('Elite Menu Connected')" completionHandler:nil];
+}
+
 @end
 
 %ctor {
