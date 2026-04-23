@@ -1,7 +1,7 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 
-// --- HTML CONTENT (GIỮ NGUYÊN CODE CỦA BẠN NHƯNG FIX ĐƯỜNG DẪN) ---
+// --- HTML CONTENT: Fix lỗi Font và Cảm ứng ---
 static NSString *htmlContent = @R"html(
 <!DOCTYPE html>
 <html lang="vi">
@@ -326,7 +326,7 @@ static NSString *htmlContent = @R"html(
 @interface EliteMenu : NSObject <WKScriptMessageHandler, WKNavigationDelegate>
 @property (nonatomic, strong) WKWebView *web;
 @property (nonatomic, strong) UIButton *btn;
-@property (nonatomic, strong) UIWindow *window;
+@property (nonatomic, strong) UIWindow *menuWindow;
 + (instancetype)shared;
 @end
 
@@ -339,62 +339,60 @@ static NSString *htmlContent = @R"html(
     return s;
 }
 
-// Fix lỗi SDK 18 - Quan trọng để không bị lỗi build
+// Fix lỗi SDK 18 cho WKScriptMessageHandler
 - (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message {}
 
 - (void)load {
-    self.window = [UIApplication sharedApplication].keyWindow;
-    if (!self.window) return;
+    // Tạo một Window riêng cho Menu (Cách h5gg làm để chống giật lag và đè lớp)
+    self.menuWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    self.menuWindow.windowLevel = UIWindowLevelStatusBar + 100; // Đưa lên lớp cao nhất
+    self.menuWindow.backgroundColor = [UIColor clearColor];
+    [self.menuWindow makeKeyAndVisible];
+    self.menuWindow.hidden = YES; // Ẩn lúc đầu
 
-    // CẤU HÌNH WEBVIEW GIỐNG H5GG
     WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
     config.allowsInlineMediaPlayback = YES;
-    
-    // Mở quyền truy cập script cực mạnh
-    WKPreferences *prefs = [[WKPreferences alloc] init];
-    prefs.javaScriptCanOpenWindowsAutomatically = YES;
-    config.preferences = prefs;
-    
     [config.userContentController addScriptMessageHandler:self name:@"handler"];
 
-    // Khởi tạo WebView full màn hình nhưng tạm ẩn
-    self.web = [[WKWebView alloc] initWithFrame:self.window.bounds configuration:config];
+    self.web = [[WKWebView alloc] initWithFrame:self.menuWindow.bounds configuration:config];
     self.web.navigationDelegate = self;
     self.web.backgroundColor = [UIColor clearColor];
     self.web.opaque = NO;
-    self.web.hidden = YES;
     self.web.scrollView.bounces = NO;
-
-    // Load HTML với baseURL để cho phép Fetch/XHR (Fix lỗi "chỉ xem")
-    [self.web loadHTMLString:htmlContent baseURL:[NSURL URLWithString:@"https://www.google.com"]];
-    [self.window addSubview:self.web];
-
-    // NÚT NỔI (FLOAT BUTTON)
-    self.btn = [UIButton buttonWithType:UIButtonTypeCustom];
-    self.btn.frame = CGRectMake(100, 100, 60, 60);
-    self.btn.layer.cornerRadius = 30;
-    self.btn.backgroundColor = [[UIColor cyanColor] colorWithAlphaComponent:0.8];
-    [self.btn setTitle:@"Elite" forState:UIControlStateNormal];
-    self.btn.titleLabel.font = [UIFont boldSystemFontOfSize:14];
-    [self.btn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
     
+    // Ép WebKit chạy ở chế độ tăng tốc phần cứng
+    [self.web loadHTMLString:htmlContent baseURL:[NSURL URLWithString:@"https://www.google.com"]];
+    [self.menuWindow addSubview:self.web];
+
+    // Tạo nút nổi
+    self.btn = [UIButton buttonWithType:UIButtonTypeCustom];
+    self.btn.frame = CGRectMake(50, 150, 60, 60);
+    self.btn.backgroundColor = [[UIColor cyanColor] colorWithAlphaComponent:0.8];
+    self.btn.layer.cornerRadius = 30;
+    self.btn.layer.borderWidth = 2;
+    self.btn.layer.borderColor = [UIColor whiteColor].CGColor;
+    [self.btn setTitle:@"Elite" forState:UIControlStateNormal];
     [self.btn addTarget:self action:@selector(toggle) forControlEvents:UIControlEventTouchUpInside];
     
-    // Thêm kéo thả cho nút
+    // Đưa nút vào KeyWindow của Game để luôn nổi
+    [[UIApplication sharedApplication].keyWindow addSubview:self.btn];
+    
     UIPanGestureRecognizer *pan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     [self.btn addGestureRecognizer:pan];
-    
-    [self.window addSubview:self.btn];
 }
 
 - (void)toggle {
-    self.web.hidden = !self.web.hidden;
-    // Khi hiện menu thì khóa cảm ứng game phía dưới
-    self.web.userInteractionEnabled = !self.web.hidden;
+    self.menuWindow.hidden = !self.menuWindow.hidden;
+    // Fix lỗi cảm ứng: Khi hiện menu thì khóa Game, ẩn menu thì trả cảm ứng cho Game
+    if (!self.menuWindow.hidden) {
+        [self.menuWindow makeKeyWindow];
+    } else {
+        [[UIApplication sharedApplication].keyWindow makeKeyWindow];
+    }
 }
 
 - (void)handlePan:(UIPanGestureRecognizer *)p {
-    CGPoint loc = [p locationInView:self.window];
+    CGPoint loc = [p locationInView:p.view.superview];
     self.btn.center = loc;
 }
 
