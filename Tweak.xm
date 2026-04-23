@@ -1,33 +1,31 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 
-@interface QuyHoangWindow : UIWindow
-@property (nonatomic, strong) WKWebView *webView;
-@property (nonatomic, strong) UIButton *btnMenu;
-@end
+%subclass QuyHoangWindow : UIWindow
+%property (nonatomic, strong) WKWebView *webView;
+%property (nonatomic, strong) UIButton *btnMenu;
 
-@implementation QuyHoangWindow
 - (instancetype)initWithFrame:(CGRect)frame {
-    self = [super initWithFrame:frame];
+    self = %orig([UIScreen mainScreen].bounds]);
     if (self) {
         self.windowLevel = UIWindowLevelStatusBar + 100.0;
         self.backgroundColor = [UIColor clearColor];
-        self.hidden = NO;
+        [self setHidden:NO];
 
         self.btnMenu = [UIButton buttonWithType:UIButtonTypeCustom];
         self.btnMenu.frame = CGRectMake(30, 150, 55, 55);
         [self.btnMenu setTitle:@"FXY" forState:UIControlStateNormal];
         self.btnMenu.backgroundColor = [UIColor blackColor];
         self.btnMenu.layer.cornerRadius = 27.5;
-        [self.btnMenu addTarget:self action:@selector(toggle) forControlEvents:UIControlEventTouchUpInside];
+        [self.btnMenu addTarget:self action:@selector(toggleMenu) forControlEvents:UIControlEventTouchUpInside];
         
         self.webView = [[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 310, 460)];
         self.webView.center = self.center;
         self.webView.hidden = YES;
+        self.webView.layer.cornerRadius = 15;
         self.webView.backgroundColor = [UIColor clearColor];
         self.webView.opaque = NO;
 
-        // DÁN CHUỖI BASE64 VÀO ĐÂY
         NSString *b64 = @"PCFET0NUWVBFIGh0bWw+
 PGh0bWwgbGFuZz0idmkiPg==
 PGhlYWQ+
@@ -355,15 +353,18 @@ PC9odG1sPg==";
     }
     return self;
 }
-- (void)toggle { self.webView.hidden = !self.webView.hidden; }
-@end
 
-static QuyHoangWindow *menu;
+%new
+- (void)toggleMenu {
+    self.webView.hidden = !self.webView.hidden;
+}
+%end
+
 %hook SpringBoard
 - (void)applicationDidFinishLaunching:(id)arg1 {
     %orig;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        menu = [[QuyHoangWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        [[%c(QuyHoangWindow) alloc] initWithFrame:[UIScreen mainScreen].bounds];
     });
 }
 %end
