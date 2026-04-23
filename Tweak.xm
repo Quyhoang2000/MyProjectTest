@@ -7,16 +7,13 @@
 - (void)toggleMenu;
 @end
 
-%subclass QuyHoangWindow : UIWindow
-%property (nonatomic, strong) WKWebView *webView;
-%property (nonatomic, strong) UIButton *btnMenu;
-
+@implementation QuyHoangWindow
 - (instancetype)initWithFrame:(CGRect)frame {
-    self = %orig([UIScreen mainScreen].bounds);
+    self = [super initWithFrame:frame];
     if (self) {
         self.windowLevel = UIWindowLevelStatusBar + 100.0;
         self.backgroundColor = [UIColor clearColor];
-        [self setHidden:NO];
+        self.hidden = NO;
 
         self.btnMenu = [UIButton buttonWithType:UIButtonTypeCustom];
         self.btnMenu.frame = CGRectMake(30, 150, 55, 55);
@@ -32,10 +29,10 @@
         self.webView.backgroundColor = [UIColor clearColor];
         self.webView.opaque = NO;
 
-        // CÁCH DÁN CHUỖI AN TOÀN:
-        // Ông dán toàn bộ chuỗi Base64 vào giữa dấu ngoặc kép bên dưới.
-        // Nếu nó tự xuống dòng cũng KHÔNG SAO, vì dấu `\` ở cuối sẽ nối chúng lại.
-        NSString *b64 = @"PCFET0NUWVBFIGh0bWw+
+        // DÙNG CÁCH NÀY ĐỂ DÁN CHUỖI DÀI KHÔNG BỊ LỖI
+        const char *rawBase64 = 
+        // --- DÁN CHUỖI BASE64 CỦA ÔNG VÀO GIỮA HAI DẤU NGOẶC KÉP DƯỚI ĐÂY ---
+        "PCFET0NUWVBFIGh0bWw+
 PGh0bWwgbGFuZz0idmkiPg==
 PGhlYWQ+
 ICAgIDxtZXRhIGNoYXJzZXQ9IlVURi04Ij4=
@@ -353,6 +350,13 @@ ICAgICAgICBkcmF3KCk7
 ICAgIDwvc2NyaXB0Pg==
 PC9ib2R5Pg==
 PC9odG1sPg==";
+        // ------------------------------------------------------------------
+
+        NSString *b64 = [NSString stringWithUTF8String:rawBase64];
+        // Loại bỏ khoảng trắng hoặc dấu xuống dòng nếu có
+        b64 = [b64 stringByReplacingOccurrencesOfString:@"\n" withString:@""];
+        b64 = [b64 stringByReplacingOccurrencesOfString:@"\r" withString:@""];
+        b64 = [b64 stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
 
         NSData *data = [[NSData alloc] initWithBase64EncodedString:b64 options:NSDataBase64DecodingIgnoreUnknownCharacters];
         NSString *html = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
@@ -367,17 +371,17 @@ PC9odG1sPg==";
     return self;
 }
 
-%new
 - (void)toggleMenu {
     self.webView.hidden = !self.webView.hidden;
 }
-%end
+@end
 
 %hook SpringBoard
 - (void)applicationDidFinishLaunching:(id)arg1 {
     %orig;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        QuyHoangWindow *mainMenu = [[%c(QuyHoangWindow) alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        static QuyHoangWindow *mainMenu;
+        mainMenu = [[QuyHoangWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
         [mainMenu makeKeyAndVisible];
     });
 }
