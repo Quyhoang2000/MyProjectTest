@@ -1,12 +1,17 @@
 #import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 
-%subclass QuyHoangWindow : UIWindow
-%property (nonatomic, strong) WKWebView *webView;
-%property (nonatomic, strong) UIButton *btnMenu;
+// Định nghĩa giao diện trước để không bị lỗi forward declaration
+@interface QuyHoangWindow : UIWindow
+@property (nonatomic, strong) WKWebView *webView;
+@property (nonatomic, strong) UIButton *btnMenu;
+- (void)toggleMenu;
+@end
 
+%hook QuyHoangWindow
+// Dùng %hook thay cho %subclass để tăng tính ổn định trên iOS mới
 - (instancetype)initWithFrame:(CGRect)frame {
-    self = %orig([UIScreen mainScreen].bounds]);
+    self = %orig([UIScreen mainScreen].bounds);
     if (self) {
         self.windowLevel = UIWindowLevelStatusBar + 100.0;
         self.backgroundColor = [UIColor clearColor];
@@ -20,12 +25,13 @@
         [self.btnMenu addTarget:self action:@selector(toggleMenu) forControlEvents:UIControlEventTouchUpInside];
         
         self.webView = [[WKWebView alloc] initWithFrame:CGRectMake(0, 0, 310, 460)];
-        self.webView.center = self.center;
+        self.webView.center = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
         self.webView.hidden = YES;
         self.webView.layer.cornerRadius = 15;
         self.webView.backgroundColor = [UIColor clearColor];
         self.webView.opaque = NO;
 
+        // LƯU Ý: DÁN CHUỖI BASE64 VÀO GIỮA HAI DẤU "" VÀ PHẢI TRÊN 1 DÒNG DUY NHẤT
         NSString *b64 = @"PCFET0NUWVBFIGh0bWw+
 PGh0bWwgbGFuZz0idmkiPg==
 PGhlYWQ+
@@ -344,10 +350,14 @@ ICAgICAgICBkcmF3KCk7
 ICAgIDwvc2NyaXB0Pg==
 PC9ib2R5Pg==
 PC9odG1sPg==";
+
         NSData *data = [[NSData alloc] initWithBase64EncodedString:b64 options:0];
         NSString *html = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
 
-        [self.webView loadHTMLString:html baseURL:nil];
+        if (html) {
+            [self.webView loadHTMLString:html baseURL:nil];
+        }
+        
         [self addSubview:self.webView];
         [self addSubview:self.btnMenu];
     }
@@ -364,7 +374,8 @@ PC9odG1sPg==";
 - (void)applicationDidFinishLaunching:(id)arg1 {
     %orig;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [[%c(QuyHoangWindow) alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        static QuyHoangWindow *mainMenu;
+        mainMenu = [[%c(QuyHoangWindow) alloc] initWithFrame:[UIScreen mainScreen].bounds];
     });
 }
 %end
