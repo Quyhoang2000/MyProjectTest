@@ -4,7 +4,6 @@
 @interface QuyHoangWindow : UIWindow
 @property (nonatomic, strong) WKWebView *webView;
 @property (nonatomic, strong) UIButton *btnMenu;
-- (void)toggleMenu;
 @end
 
 @implementation QuyHoangWindow
@@ -29,9 +28,11 @@
         self.webView.backgroundColor = [UIColor clearColor];
         self.webView.opaque = NO;
 
-        // DÙNG CÁCH NÀY ĐỂ DÁN CHUỖI DÀI KHÔNG BỊ LỖI
-        const char *rawBase64 = 
-        // --- DÁN CHUỖI BASE64 CỦA ÔNG VÀO GIỮA HAI DẤU NGOẶC KÉP DƯỚI ĐÂY ---
+        // --- DÁN CHUỖI BASE64 CỦA ÔNG VÀO DƯỚI ĐÂY ---
+        // LƯU Ý: MỖI DÒNG PHẢI ĐƯỢC BAO QUANH BỞI DẤU " "
+        // Ví dụ: "Chuoi1" "Chuoi2" "Chuoi3"
+        NSString *b64 = @
+        
         "PCFET0NUWVBFIGh0bWw+
 PGh0bWwgbGFuZz0idmkiPg==
 PGhlYWQ+
@@ -350,13 +351,8 @@ ICAgICAgICBkcmF3KCk7
 ICAgIDwvc2NyaXB0Pg==
 PC9ib2R5Pg==
 PC9odG1sPg==";
-        // ------------------------------------------------------------------
 
-        NSString *b64 = [NSString stringWithUTF8String:rawBase64];
-        // Loại bỏ khoảng trắng hoặc dấu xuống dòng nếu có
-        b64 = [b64 stringByReplacingOccurrencesOfString:@"\n" withString:@""];
-        b64 = [b64 stringByReplacingOccurrencesOfString:@"\r" withString:@""];
-        b64 = [b64 stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        // --- HẾT ĐOẠN DÁN ---
 
         NSData *data = [[NSData alloc] initWithBase64EncodedString:b64 options:NSDataBase64DecodingIgnoreUnknownCharacters];
         NSString *html = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
